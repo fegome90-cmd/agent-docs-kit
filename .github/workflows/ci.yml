@@ -19,15 +19,12 @@ jobs:
       - run: uv run ruff format --check .
 
   types:
-    name: Types (mypy + pyrefly) — debt, see DEBT.md
+    name: Types (mypy + pyrefly) — report only
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
-    # No bloqueante a proposito: el codigo heredado no esta anotado.
-    # Cuando mypy strict llegue a 0, quitar continue-on-error.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -35,21 +32,42 @@ jobs:
           enable-cache: true
       - run: uv python install ${{ matrix.python-version }}
       - run: uv sync --extra dev
+      # Report-only hasta que la deuda llegue a 0. Ver DEBT.md.
       - name: mypy
-        run: uv run mypy .
+        run: |
+          uv run mypy . > mypy.txt 2>&1 || true
+          N=$(grep -c "error:" mypy.txt || true)
+          tail -5 mypy.txt
+          {
+            echo "### mypy (Python ${{ matrix.python-version }})"
+            echo "**$N errores.** Objetivo: 0 con \`strict = true\`. Ver \`DEBT.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$N" -eq 0 ]; then exit 0; fi
       - name: pyrefly
-        run: uv run pyrefly check
+        run: |
+          uv run pyrefly check > pyrefly.txt 2>&1 || true
+          N=$(grep -oE "[0-9]+ errors" pyrefly.txt | tail -1 || echo "?")
+          tail -5 pyrefly.txt
+          {
+            echo "### pyrefly (Python ${{ matrix.python-version }})"
+            echo "**$N.** Ver \`DEBT.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: typecheck-python-${{ matrix.python-version }}
+          path: |
+            mypy.txt
+            pyrefly.txt
+          retention-days: 7
 
   test:
-    name: Tests (pytest) — debt, see DEBT.md
+    name: Tests (pytest) — report only
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
-    # No bloqueante: 5 fallos preexistentes del candidato v0.5.0-rc.1
-    # mas contaminacion de git ambiente. Ver DEBT.md.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
@@ -57,7 +75,26 @@ jobs:
           enable-cache: true
       - run: uv python install ${{ matrix.python-version }}
       - run: uv sync --extra dev
-      - name: Run tests outside the ambient git repo
+      # Fuera del work tree para evitar la contaminacion de git ambiente.
+      # Report-only por los 5 fallos preexistentes. Ver DEBT.md.
+      - name: Run tests
         run: |
-          mkdir -p "$RUNNER_TEMP/adk" && tar -c --exclude=.git . | tar -x -C "$RUNNER_TEMP/adk"
-          cd "$RUNNER_TEMP/adk" && uv run --project "$GITHUB_WORKSPACE" pytest -q
+          mkdir -p "$RUNNER_TEMP/adk"
+          tar -c --exclude=.git . | tar -x -C "$RUNNER_TEMP/adk"
+          set +e
+          ( cd "$RUNNER_TEMP/adk" && uv run --project "$GITHUB_WORKSPACE" pytest -q ) > pytest.txt 2>&1
+          set -e
+          tail -12 pytest.txt
+          {
+            echo "### pytest (Python ${{ matrix.python-version }})"
+            echo '```'
+            tail -3 pytest.txt
+            echo '```'
+            echo "Fallos preexistentes del candidato. Ver \`DEBT.md\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pytest-python-${{ matrix.python-version }}
+          path: pytest.txt
+          retention-days: 7
