@@ -13,7 +13,7 @@ dependencies = ["portalocker==4.4.2"]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=8",
+    "pytest>=9.2.0",
     "ruff>=0.6",
     "mypy>=1.11",
     "pyrefly>=0.30",
