@@ -14,24 +14,35 @@ atomic snapshot. Corrupt/incomplete segments are never repaired automatically.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import contextlib
 import json
 import math
 import os
-from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import stat
+from datetime import UTC, datetime
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any, BinaryIO
 from uuid import UUID, uuid4
-
 
 SCHEMA_VERSION = 1
 DEFAULT_HISTORY = "docs/living/history"
 MAX_EVENT_BYTES = 1024 * 1024
 MAX_SEGMENT_BYTES = 64 * 1024 * 1024
 MAX_JSON_DEPTH = 64
-_FIELDS = frozenset({"schema_version", "event_id", "idempotency_key", "session_id",
-                     "sequence", "occurred_at", "kind", "source", "payload"})
+_FIELDS = frozenset(
+    {
+        "schema_version",
+        "event_id",
+        "idempotency_key",
+        "session_id",
+        "sequence",
+        "occurred_at",
+        "kind",
+        "source",
+        "payload",
+    }
+)
 _KIND = re.compile(r"[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*\Z")
 _TIMESTAMP = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z\Z")
 
@@ -49,8 +60,12 @@ def _uuid(value: object, label: str) -> str:
 
 
 def _text(value: object, label: str, limit: int = 256) -> str:
-    if (not isinstance(value, str) or not value.strip() or len(value) > limit
-            or any(ord(char) < 32 or ord(char) == 127 for char in value)):
+    if (
+        not isinstance(value, str)
+        or not value.strip()
+        or len(value) > limit
+        or any(ord(char) < 32 or ord(char) == 127 for char in value)
+    ):
         raise ValueError(f"{label} debe ser texto no vacío, sin controles, de hasta {limit} caracteres.")
     try:
         value.encode("utf-8", errors="strict")
@@ -104,8 +119,7 @@ def _payload(value: object) -> dict[str, Any]:
 
 def _canonical(value: object) -> str:
     try:
-        return json.dumps(value, ensure_ascii=False, allow_nan=False,
-                          sort_keys=True, separators=(",", ":"))
+        return json.dumps(value, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":"))
     except (ValueError, TypeError, RecursionError) as exc:
         raise ValueError("No se puede serializar el evento como JSON estricto.") from exc
 
@@ -222,8 +236,14 @@ def _location(root: Path, history: str) -> tuple[Path, Path, str]:
         raise ValueError("La raíz debe ser un directorio existente.")
     value = _text(history, "history", 4096)
     relative = PurePosixPath(value)
-    if (relative.is_absolute() or PureWindowsPath(value).drive or "\\" in value
-            or ".." in relative.parts or relative.as_posix() != value or value == "."):
+    if (
+        relative.is_absolute()
+        or PureWindowsPath(value).drive
+        or "\\" in value
+        or ".." in relative.parts
+        or relative.as_posix() != value
+        or value == "."
+    ):
         raise ValueError("history debe ser una ruta relativa canónica dentro de la raíz.")
     directory = _safe_path(root / value)
     if not directory.is_relative_to(root):
@@ -242,10 +262,8 @@ def _mkdirs(root: Path, directory: Path) -> None:
     cursor = root
     for part in directory.relative_to(root).parts:
         cursor = _safe_path(cursor / part)
-        try:
+        with contextlib.suppress(FileExistsError):
             cursor.mkdir()
-        except FileExistsError:
-            pass
         if not stat.S_ISDIR(_safe_path(cursor).lstat().st_mode):
             raise ValueError(f"El padre del segmento no es un directorio: {cursor}")
 
@@ -266,18 +284,27 @@ def _regular(path: Path, *, missing_ok: bool = False) -> os.stat_result | None:
 
 
 def _signature(info: os.stat_result) -> tuple[int, ...]:
-    return (info.st_dev, info.st_ino, info.st_mode, info.st_nlink, info.st_size,
-            info.st_mtime_ns, info.st_ctime_ns)
+    return (
+        info.st_dev,
+        info.st_ino,
+        info.st_mode,
+        info.st_nlink,
+        info.st_size,
+        info.st_mtime_ns,
+        info.st_ctime_ns,
+    )
 
 
-def _check_handle(path: Path, descriptor: int, expected: os.stat_result | None = None
-                  ) -> os.stat_result:
+def _check_handle(path: Path, descriptor: int, expected: os.stat_result | None = None) -> os.stat_result:
     actual = os.fstat(descriptor)
     if not stat.S_ISREG(actual.st_mode) or actual.st_nlink != 1:
         raise ValueError(f"Se requiere un archivo regular sin enlaces: {path}")
     current = _regular(path)
-    if (current is None or _signature(current) != _signature(actual)
-            or (expected is not None and _signature(expected) != _signature(actual))):
+    if (
+        current is None
+        or _signature(current) != _signature(actual)
+        or (expected is not None and _signature(expected) != _signature(actual))
+    ):
         raise OSError(f"El archivo cambió durante la operación: {path}")
     return actual
 
@@ -333,9 +360,16 @@ def _sync(stream: BinaryIO) -> None:
     os.fsync(stream.fileno())
 
 
-def append_event(root: Path, history: str, session: str, kind: str,
-                 payload: dict[str, Any], idempotency_key: str, source: str = "cli",
-                 timeout: float = 5.0) -> dict[str, Any]:
+def append_event(
+    root: Path,
+    history: str,
+    session: str,
+    kind: str,
+    payload: dict[str, Any],
+    idempotency_key: str,
+    source: str = "cli",
+    timeout: float = 5.0,
+) -> dict[str, Any]:
     """Append one event under a persistent sidecar lock and fsync before ACK.
 
     An identical retry returns the original event and fsyncs again, including
@@ -351,7 +385,7 @@ def append_event(root: Path, history: str, session: str, kind: str,
     if len(payload_json.encode("utf-8")) > MAX_EVENT_BYTES:
         raise ValueError(f"El payload supera el límite de evento de {MAX_EVENT_BYTES} bytes.")
     frozen_payload = json.loads(payload_json)
-    if (type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout < 0):
+    if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout < 0:
         raise ValueError("timeout debe ser un número finito mayor o igual que cero.")
     root, directory, _ = _location(root, history)
     path = directory / f"{session}.jsonl"
@@ -367,9 +401,14 @@ def append_event(root: Path, history: str, session: str, kind: str,
     def opener(filename: str, flags: int) -> int:
         return _open_file(Path(filename), flags | os.O_APPEND, create=True)
 
-    lock = portalocker.Lock(str(lock_path), mode="ab", timeout=timeout,
-                           check_interval=0.05, opener=opener,
-                           raise_on_release_error=True)
+    lock = portalocker.Lock(
+        str(lock_path),
+        mode="ab",
+        timeout=timeout,
+        check_interval=0.05,
+        opener=opener,
+        raise_on_release_error=True,
+    )
     try:
         with lock as lock_stream:
             _check_handle(lock_path, lock_stream.fileno())
@@ -379,8 +418,11 @@ def append_event(root: Path, history: str, session: str, kind: str,
                 events = parse_segment(data, expected_session=session)
                 for existing in events:
                     if existing["idempotency_key"] == idempotency_key:
-                        if (existing["kind"] != kind or existing["source"] != source
-                                or _canonical(existing["payload"]) != payload_json):
+                        if (
+                            existing["kind"] != kind
+                            or existing["source"] != source
+                            or _canonical(existing["payload"]) != payload_json
+                        ):
                             raise ValueError("Conflicto: idempotency_key ya existe con otro contenido.")
                         _check_handle(path, stream.fileno(), before)
                         _sync(stream)
@@ -395,7 +437,9 @@ def append_event(root: Path, history: str, session: str, kind: str,
                     "idempotency_key": idempotency_key,
                     "session_id": session,
                     "sequence": len(events) + 1,
-                    "occurred_at": datetime.now(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z"),
+                    "occurred_at": datetime.now(UTC)
+                    .isoformat(timespec="microseconds")
+                    .replace("+00:00", "Z"),
                     "kind": kind,
                     "source": source,
                     "payload": frozen_payload,
@@ -419,8 +463,9 @@ def append_event(root: Path, history: str, session: str, kind: str,
         raise OSError(f"Falló el lock cooperativo de la sesión: {exc}") from exc
 
 
-def _load(root: Path, history: str, session: str | None
-          ) -> tuple[str, list[tuple[Path, list[dict[str, Any]]]]]:
+def _load(
+    root: Path, history: str, session: str | None
+) -> tuple[str, list[tuple[Path, list[dict[str, Any]]]]]:
     root, directory, relative = _location(root, history)
     if session is not None:
         session = _uuid(session, "session_id")
@@ -448,16 +493,23 @@ def _load(root: Path, history: str, session: str | None
 def verify_history(root: Path, history: str, session: str | None = None) -> dict[str, Any]:
     """Read and validate selected segments, without writes or lock creation."""
     relative, segments = _load(root, history, session)
-    summaries = [{
-        "session_id": path.stem,
-        "path": path.as_posix(),
-        "state": "closed" if events and events[-1]["kind"] == "session.closed" else "open",
-        "event_count": len(events),
-        "last_sequence": len(events),
-    } for path, events in segments]
-    return {"state": "valid", "history": relative, "sessions": summaries,
-            "event_count": sum(item["event_count"] for item in summaries),
-            "semantic_review": "not_attested"}
+    summaries = [
+        {
+            "session_id": path.stem,
+            "path": path.as_posix(),
+            "state": "closed" if events and events[-1]["kind"] == "session.closed" else "open",
+            "event_count": len(events),
+            "last_sequence": len(events),
+        }
+        for path, events in segments
+    ]
+    return {
+        "state": "valid",
+        "history": relative,
+        "sessions": summaries,
+        "event_count": sum(item["event_count"] for item in summaries),
+        "semantic_review": "not_attested",
+    }
 
 
 def _code(value: str) -> str:
@@ -467,8 +519,7 @@ def _code(value: str) -> str:
 
 def _markdown_text(value: str) -> str:
     # Keep each adapted label on one physical line; full strings remain in JSON.
-    value = "".join(f"\\u{ord(char):04x}" if ord(char) < 32 or ord(char) == 127 else char
-                    for char in value)
+    value = "".join(f"\\u{ord(char):04x}" if ord(char) < 32 or ord(char) == 127 else char for char in value)
     value = value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
     return re.sub(r"([\\`*_{}\[\]()#+.!|~-])", r"\\\1", value)
 
@@ -484,15 +535,21 @@ def _render_entry(event: dict[str, Any]) -> list[str]:
         entry_lines.append(f"- **Summary**: {_markdown_text(summary)}")
     if isinstance(files_list, list) and files_list and all(isinstance(item, str) for item in files_list):
         entry_lines.append(f"- **Files**: {', '.join(_markdown_text(item) for item in files_list)}")
-    if isinstance(commands_list, list) and commands_list and all(isinstance(item, str) for item in commands_list):
+    if (
+        isinstance(commands_list, list)
+        and commands_list
+        and all(isinstance(item, str) for item in commands_list)
+    ):
         entry_lines.append(f"- **Commands**: {', '.join(_markdown_text(item) for item in commands_list)}")
-    entry_lines.extend([
-        f"- Event ID: {_code(event['event_id'])}",
-        f"- Source: {_code(event['source'])}",
-        f"- Idempotency key: {_code(event['idempotency_key'])}", "",
-    ])
-    content = json.dumps(payload, ensure_ascii=False, allow_nan=False,
-                         sort_keys=True, indent=2)
+    entry_lines.extend(
+        [
+            f"- Event ID: {_code(event['event_id'])}",
+            f"- Source: {_code(event['source'])}",
+            f"- Idempotency key: {_code(event['idempotency_key'])}",
+            "",
+        ]
+    )
+    content = json.dumps(payload, ensure_ascii=False, allow_nan=False, sort_keys=True, indent=2)
     fence = "`" * max(3, max((len(run) for run in re.findall(r"`+", content)), default=0) + 1)
     entry_lines.extend([f"{fence}json", content, fence, ""])
     return entry_lines
@@ -501,15 +558,27 @@ def _render_entry(event: dict[str, Any]) -> list[str]:
 def render_history(root: Path, history: str, session: str | None = None) -> str:
     """Return a derived Markdown view; never mutate or export source files."""
     _, segments = _load(root, history, session)
-    lines = ["# Session History", "", "Semantic review: `not_attested`.", "",
-             "Vista derivada de eventos JSONL validados; no certifica corrección semántica.", ""]
+    lines = [
+        "# Session History",
+        "",
+        "Semantic review: `not_attested`.",
+        "",
+        "Vista derivada de eventos JSONL validados; no certifica corrección semántica.",
+        "",
+    ]
     if not segments:
         lines.extend(["No hay sesiones registradas.", ""])
     for path, events in segments:
         closed = bool(events and events[-1]["kind"] == "session.closed")
-        lines.extend([f"## Session {path.stem}", "",
-                      f"- State: {'closed' if closed else 'open'}",
-                      f"- Events: {len(events)}", ""])
+        lines.extend(
+            [
+                f"## Session {path.stem}",
+                "",
+                f"- State: {'closed' if closed else 'open'}",
+                f"- Events: {len(events)}",
+                "",
+            ]
+        )
         for event in events:
             lines.extend(_render_entry(event))
     return "\n".join(lines)

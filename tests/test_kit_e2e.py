@@ -3,18 +3,19 @@
 No subprocess doubles are used here. Every repository is a new temporary fixture.
 Set KIT_E2E_GRAPHIFY=1 to require the separately installed Graphify 0.9.26.
 """
+
 from __future__ import annotations
 
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 import uuid
+from pathlib import Path
 
 KIT = Path(__file__).resolve().parents[1]
 
@@ -27,14 +28,21 @@ class KitEndToEndTests(unittest.TestCase):
         self.root = self.base / "project with spaces"
         (self.root / "src").mkdir(parents=True)
         (self.root / "src/config.py").write_text('VERSION = "1.0"\n', encoding="utf-8")
-        (self.root / "README.md").write_text('# Proyecto\nVersion: 1.0\n', encoding="utf-8")
+        (self.root / "README.md").write_text("# Proyecto\nVersion: 1.0\n", encoding="utf-8")
         self.deployed = self.root / "tools/agent-docs-kit"
         shutil.copytree(KIT, self.deployed, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         self.cli = self.deployed / "agent_docs_kit.py"
-        self.env = {key: value for key, value in os.environ.items()
-                    if not key.startswith(("GIT_", "GRAPHIFY_", "AGENT_DOCS_KIT_"))}
-        self.env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
-                        GIT_TERMINAL_PROMPT="0", PYTHONDONTWRITEBYTECODE="1")
+        self.env = {
+            key: value
+            for key, value in os.environ.items()
+            if not key.startswith(("GIT_", "GRAPHIFY_", "AGENT_DOCS_KIT_"))
+        }
+        self.env.update(
+            GIT_CONFIG_NOSYSTEM="1",
+            GIT_CONFIG_GLOBAL=os.devnull,
+            GIT_TERMINAL_PROMPT="0",
+            PYTHONDONTWRITEBYTECODE="1",
+        )
         self.env["PATH"] = str(Path(sys.executable).parent) + os.pathsep + os.environ.get("PATH", "")
         self.git("init", "-q")
         self.git("config", "user.name", "E2E fixture")
@@ -49,36 +57,79 @@ class KitEndToEndTests(unittest.TestCase):
         self.facts_rel = "docs/living/facts.json"
 
     def run_cli(self, *args: str, expected: int = 0, timeout: float = 30) -> subprocess.CompletedProcess[str]:
-        result = subprocess.run([sys.executable, "-B", str(self.cli), *args], cwd=self.root,
-                                env=self.env, text=True, capture_output=True, timeout=timeout)
+        result = subprocess.run(
+            [sys.executable, "-B", str(self.cli), *args],
+            cwd=self.root,
+            env=self.env,
+            text=True,
+            capture_output=True,
+            timeout=timeout,
+        )
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
         return result
 
     def git(self, *args: str, expected: int = 0) -> subprocess.CompletedProcess[str]:
-        result = subprocess.run(["git", "-C", str(self.root), *args], env=self.env,
-                                text=True, capture_output=True, timeout=30)
+        result = subprocess.run(
+            ["git", "-C", str(self.root), *args], env=self.env, text=True, capture_output=True, timeout=30
+        )
         self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
         return result
 
     def inventory(self) -> dict[str, str]:
-        return {p.relative_to(self.root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
-                for p in self.root.rglob("*") if p.is_file()}
+        return {
+            p.relative_to(self.root).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in self.root.rglob("*")
+            if p.is_file()
+        }
 
     def capture(self, relative: str | None = None) -> None:
-        self.run_cli("snapshot", str(self.root), "--source", "src", "--document", "README.md",
-                     "--output", str(self.root / (relative or self.snapshot_rel)), "--apply")
+        self.run_cli(
+            "snapshot",
+            str(self.root),
+            "--source",
+            "src",
+            "--document",
+            "README.md",
+            "--output",
+            str(self.root / (relative or self.snapshot_rel)),
+            "--apply",
+        )
 
     def append(self, key: str, summary: str = "Nota conservada", kind: str = "note") -> dict:
-        return json.loads(self.run_cli("append", str(self.root), "--session", self.session,
-                                      "--key", key, "--kind", kind, "--summary", summary,
-                                      "--apply").stdout)
+        return json.loads(
+            self.run_cli(
+                "append",
+                str(self.root),
+                "--session",
+                self.session,
+                "--key",
+                key,
+                "--kind",
+                kind,
+                "--summary",
+                summary,
+                "--apply",
+            ).stdout
+        )
 
     def make_facts(self) -> None:
         path = self.root / self.facts_rel
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"schema_version": 1, "facts": [{
-            "id": "version", "canonical": {"file": "src/config.py", "pattern": 'VERSION = "([^"]+)"'},
-            "copies": [{"file": "README.md", "pattern": r"Version: (\S+)"}]}]}), encoding="utf-8")
+        path.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "facts": [
+                        {
+                            "id": "version",
+                            "canonical": {"file": "src/config.py", "pattern": 'VERSION = "([^"]+)"'},
+                            "copies": [{"file": "README.md", "pattern": r"Version: (\S+)"}],
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
 
     def baseline_commit(self) -> None:
         self.capture()
@@ -88,17 +139,34 @@ class KitEndToEndTests(unittest.TestCase):
         self.git("commit", "-qm", "Initial fixture")
 
     def gate(self, expected: int = 0) -> dict:
-        return json.loads(self.run_cli("index-check", str(self.root), "--snapshot", self.snapshot_rel,
-                                      "--facts", self.facts_rel, "--json", expected=expected).stdout)
+        return json.loads(
+            self.run_cli(
+                "index-check",
+                str(self.root),
+                "--snapshot",
+                self.snapshot_rel,
+                "--facts",
+                self.facts_rel,
+                "--json",
+                expected=expected,
+            ).stdout
+        )
 
     def test_bootstrap_inspect_prepare_author_check_and_exclusive_output(self) -> None:
         self.run_cli("inspect", str(self.root))
         proposal = self.base / "proposal"
         self.run_cli("prepare", str(self.root), "--output", str(proposal), "--apply")
         self.run_cli("check", str(proposal), expected=1)
-        for rel in ("AGENTS.md", "docs/agent/CONTEXT.md", "docs/agent/ARCHITECTURE.md",
-                    "docs/agent/CODEMAP.md", "docs/agent/RUNTIME.md"):
-            (proposal / rel).write_text("# Documento redactado\nContenido específico del fixture.\n", encoding="utf-8")
+        for rel in (
+            "AGENTS.md",
+            "docs/agent/CONTEXT.md",
+            "docs/agent/ARCHITECTURE.md",
+            "docs/agent/CODEMAP.md",
+            "docs/agent/RUNTIME.md",
+        ):
+            (proposal / rel).write_text(
+                "# Documento redactado\nContenido específico del fixture.\n", encoding="utf-8"
+            )
         self.run_cli("check", str(proposal))
         before = {p: p.read_bytes() for p in proposal.rglob("*.md")}
         self.run_cli("prepare", str(self.root), "--output", str(proposal), "--apply", expected=1)
@@ -109,11 +177,24 @@ class KitEndToEndTests(unittest.TestCase):
         before = self.snapshot.read_bytes()
         self.run_cli("status", str(self.root), "--snapshot", str(self.snapshot), "--json")
         (self.root / "src/new.py").write_text("VALUE = 2\n", encoding="utf-8")
-        report = json.loads(self.run_cli("status", str(self.root), "--snapshot", str(self.snapshot),
-                                         "--json", expected=1).stdout)
+        report = json.loads(
+            self.run_cli(
+                "status", str(self.root), "--snapshot", str(self.snapshot), "--json", expected=1
+            ).stdout
+        )
         self.assertIn("src/new.py", report["sources"]["added"])
-        self.run_cli("snapshot", str(self.root), "--source", "src", "--document", "README.md",
-                     "--output", str(self.snapshot), "--apply", expected=1)
+        self.run_cli(
+            "snapshot",
+            str(self.root),
+            "--source",
+            "src",
+            "--document",
+            "README.md",
+            "--output",
+            str(self.snapshot),
+            "--apply",
+            expected=1,
+        )
         self.assertEqual(self.snapshot.read_bytes(), before)
 
     def test_append_retry_close_verify_render_and_exclusive_export(self) -> None:
@@ -132,8 +213,18 @@ class KitEndToEndTests(unittest.TestCase):
         self.assertIn("Primera nota", rendered)
         self.assertIn("Corrección posterior", rendered)
         self.assertEqual(before, self.inventory())
-        self.run_cli("append", str(self.root), "--session", self.session, "--key", "late",
-                     "--summary", "Too late", "--apply", expected=3)
+        self.run_cli(
+            "append",
+            str(self.root),
+            "--session",
+            self.session,
+            "--key",
+            "late",
+            "--summary",
+            "Too late",
+            "--apply",
+            expected=3,
+        )
         export = self.base / "readable.md"
         self.run_cli("render", str(self.root), "--output", str(export), "--apply")
         saved = export.read_bytes()
@@ -142,11 +233,32 @@ class KitEndToEndTests(unittest.TestCase):
 
     def test_parallel_real_cli_writers_preserve_every_event(self) -> None:
         count = 16
-        processes = [subprocess.Popen([
-            sys.executable, "-B", str(self.cli), "append", str(self.root), "--session", self.session,
-            "--key", f"writer-{i}", "--summary", f"Evento {i}", "--timeout", "15", "--apply"],
-            cwd=self.root, env=self.env, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            for i in range(count)]
+        processes = [
+            subprocess.Popen(
+                [
+                    sys.executable,
+                    "-B",
+                    str(self.cli),
+                    "append",
+                    str(self.root),
+                    "--session",
+                    self.session,
+                    "--key",
+                    f"writer-{i}",
+                    "--summary",
+                    f"Evento {i}",
+                    "--timeout",
+                    "15",
+                    "--apply",
+                ],
+                cwd=self.root,
+                env=self.env,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            for i in range(count)
+        ]
         try:
             for process in processes:
                 stdout, stderr = process.communicate(timeout=25)
@@ -158,7 +270,9 @@ class KitEndToEndTests(unittest.TestCase):
                     process.communicate()
         entries = [json.loads(line) for line in self.log.read_text().splitlines()]
         self.assertEqual(len(entries), count)
-        self.assertEqual({event["idempotency_key"] for event in entries}, {f"writer-{i}" for i in range(count)})
+        self.assertEqual(
+            {event["idempotency_key"] for event in entries}, {f"writer-{i}" for i in range(count)}
+        )
         self.assertEqual(len({event["event_id"] for event in entries}), count)
         self.assertEqual([event["sequence"] for event in entries], list(range(1, count + 1)))
         self.run_cli("verify", str(self.root), "--json")
@@ -166,15 +280,35 @@ class KitEndToEndTests(unittest.TestCase):
     def test_corrupt_tail_and_key_conflict_keep_original_bytes(self) -> None:
         self.append("one")
         before = self.log.read_bytes()
-        self.run_cli("append", str(self.root), "--session", self.session, "--key", "one",
-                     "--summary", "Distinto", "--apply", expected=3)
+        self.run_cli(
+            "append",
+            str(self.root),
+            "--session",
+            self.session,
+            "--key",
+            "one",
+            "--summary",
+            "Distinto",
+            "--apply",
+            expected=3,
+        )
         self.assertEqual(before, self.log.read_bytes())
         with self.log.open("ab") as stream:
             stream.write(b'{"partial":')
         damaged = self.log.read_bytes()
         self.run_cli("verify", str(self.root), "--json", expected=3)
-        self.run_cli("append", str(self.root), "--session", self.session, "--key", "two",
-                     "--summary", "No reparar automáticamente", "--apply", expected=3)
+        self.run_cli(
+            "append",
+            str(self.root),
+            "--session",
+            self.session,
+            "--key",
+            "two",
+            "--summary",
+            "No reparar automáticamente",
+            "--apply",
+            expected=3,
+        )
         self.assertEqual(damaged, self.log.read_bytes())
 
     def test_facts_detect_drift_and_never_edit_documents(self) -> None:
@@ -182,8 +316,9 @@ class KitEndToEndTests(unittest.TestCase):
         self.run_cli("facts", str(self.root), "--manifest", self.facts_rel, "--json")
         (self.root / "README.md").write_text("Version: 0.9\n", encoding="utf-8")
         before = self.inventory()
-        report = json.loads(self.run_cli("facts", str(self.root), "--manifest", self.facts_rel,
-                                         "--json", expected=1).stdout)
+        report = json.loads(
+            self.run_cli("facts", str(self.root), "--manifest", self.facts_rel, "--json", expected=1).stdout
+        )
         self.assertEqual(report["state"], "review_required")
         self.assertEqual(before, self.inventory())
 
@@ -286,25 +421,38 @@ class KitEndToEndTests(unittest.TestCase):
 
     def test_facts_cannot_certify_a_single_occurrence_as_its_own_copy(self) -> None:
         self.make_facts()
-        config = {"schema_version": 1, "facts": [{
-            "id": "version", "canonical": {"file": "README.md", "pattern": r"Version: (1\.0)"},
-            "copies": [{"file": "README.md", "pattern": r"Version: (\S+)"}],
-        }]}
+        config = {
+            "schema_version": 1,
+            "facts": [
+                {
+                    "id": "version",
+                    "canonical": {"file": "README.md", "pattern": r"Version: (1\.0)"},
+                    "copies": [{"file": "README.md", "pattern": r"Version: (\S+)"}],
+                }
+            ],
+        }
         (self.root / self.facts_rel).write_text(json.dumps(config), encoding="utf-8")
         before = self.inventory()
         result = self.run_cli("facts", str(self.root), "--manifest", self.facts_rel, "--json", expected=3)
         self.assertIn("misma ocurrencia", result.stdout)
         self.assertEqual(before, self.inventory())
 
-    @unittest.skipUnless(os.environ.get("KIT_E2E_GRAPHIFY") == "1", "Set KIT_E2E_GRAPHIFY=1 for installed Graphify")
+    @unittest.skipUnless(
+        os.environ.get("KIT_E2E_GRAPHIFY") == "1", "Set KIT_E2E_GRAPHIFY=1 for installed Graphify"
+    )
     def test_actual_graphify_code_only_and_append_run_events(self) -> None:
-        self.assertIsNotNone(shutil.which("graphify", path=self.env["PATH"]), "Graphify was explicitly required")
+        self.assertIsNotNone(
+            shutil.which("graphify", path=self.env["PATH"]), "Graphify was explicitly required"
+        )
         (self.root / "src/math.py").write_text(
-            "def double(value):\n    return value * 2\n\ndef main():\n    return double(3)\n", encoding="utf-8")
+            "def double(value):\n    return value * 2\n\ndef main():\n    return double(3)\n",
+            encoding="utf-8",
+        )
         output = self.base / "new graph"
         before = self.inventory()
-        self.run_cli("graph", str(self.root / "src"), "--output", str(output),
-                     "--apply", "--timeout", "45", timeout=60)
+        self.run_cli(
+            "graph", str(self.root / "src"), "--output", str(output), "--apply", "--timeout", "45", timeout=60
+        )
         self.assertEqual(before, self.inventory())
         graph = json.loads((output / "graphify-out/graph.json").read_text())
         self.assertTrue(graph["nodes"])

@@ -34,24 +34,18 @@ class MarkdownRegressionTests(unittest.TestCase):
     def test_indented_code_links_are_ignored(self) -> None:
         for indent in ("    ", "\t", " \t", "   \t"):
             with self.subTest(indent=indent):
-                self.assertEqual(self.check_markdown(
-                    f"# Examples\n\n{indent}[example](missing.md)\n"
-                ), ())
+                self.assertEqual(self.check_markdown(f"# Examples\n\n{indent}[example](missing.md)\n"), ())
 
     def test_indented_fence_does_not_hide_following_authored_link(self) -> None:
         for indent in ("    ", "\t"):
             with self.subTest(indent=indent):
-                self.assert_real_link_reported(
-                    f"# Example\n\n{indent}```\n\n[real](real-missing.md)\n"
-                )
+                self.assert_real_link_reported(f"# Example\n\n{indent}```\n\n[real](real-missing.md)\n")
 
     def test_closing_fence_requires_whitespace_after_run(self) -> None:
         for fence in ("```", "~~~"):
             with self.subTest(fence=fence):
                 self.assert_real_link_reported(
-                    f"{fence}text\n{fence}text\n"
-                    "[example](missing.md)\n"
-                    f"{fence}\n[real](real-missing.md)\n"
+                    f"{fence}text\n{fence}text\n[example](missing.md)\n{fence}\n[real](real-missing.md)\n"
                 )
 
     def test_fences_allow_up_to_three_spaces_and_longer_closing_run(self) -> None:
@@ -68,8 +62,7 @@ class MarkdownRegressionTests(unittest.TestCase):
         for closing in ("```", "~~~~", "    ````", "\t````"):
             with self.subTest(closing=closing):
                 self.assert_real_link_reported(
-                    f"````text\n{closing}\n[example](missing.md)\n"
-                    "````\n[real](real-missing.md)\n"
+                    f"````text\n{closing}\n[example](missing.md)\n````\n[real](real-missing.md)\n"
                 )
 
 

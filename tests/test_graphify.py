@@ -48,8 +48,15 @@ class GraphifyTests(unittest.TestCase):
         self.addCleanup(runner.stop)
 
     def run_process(
-        self, argv: list[str], *, capture_output: bool, text: bool,
-        check: bool, env: dict[str, str], cwd: Path | None = None, timeout: float,
+        self,
+        argv: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        check: bool,
+        env: dict[str, str],
+        cwd: Path | None = None,
+        timeout: float,
     ) -> FakeCompletedProcess:
         self.calls.append(argv)
         self.assertTrue(capture_output)
@@ -58,9 +65,7 @@ class GraphifyTests(unittest.TestCase):
         self.assertGreater(timeout, 0)
         self.assertEqual(env["GRAPHIFY_OUT"], "graphify-out")
         self.assertEqual(env["PYTHONDONTWRITEBYTECODE"], "1")
-        self.assertEqual(
-            {key for key in env if key.startswith("GRAPHIFY_")}, {"GRAPHIFY_OUT"}
-        )
+        self.assertEqual({key for key in env if key.startswith("GRAPHIFY_")}, {"GRAPHIFY_OUT"})
         if argv == [self.executable, "--version"]:
             self.assertFalse(self.output.exists())
             return self.version
@@ -84,15 +89,12 @@ class GraphifyTests(unittest.TestCase):
         return status, stdout.getvalue(), stderr.getvalue()
 
     def graph_cli(self, *arguments: str) -> tuple[int, str, str]:
-        return self.cli(
-            "graph", str(self.root), "--output", str(self.output), "--apply", *arguments
-        )
+        return self.cli("graph", str(self.root), "--output", str(self.output), "--apply", *arguments)
 
     def snapshot(self) -> dict[str, bytes | str | None]:
         return {
             str(path.relative_to(self.base)): (
-                str(path.readlink()) if path.is_symlink()
-                else None if path.is_dir() else path.read_bytes()
+                str(path.readlink()) if path.is_symlink() else None if path.is_dir() else path.read_bytes()
             )
             for path in self.base.rglob("*")
         }
@@ -114,12 +116,27 @@ class GraphifyTests(unittest.TestCase):
         self.assertEqual(artifact, self.output / "graphify-out" / "graph.json")
         self.assertEqual(artifact.read_bytes(), self.graph_bytes)
         self.which.assert_called_once_with("graphify")
-        self.assertEqual(self.calls, [
-            [self.executable, "--version"],
-            [self.executable, "extract", str(self.root), "--code-only", "--no-cluster",
-             "--max-workers", "1", "--out", str(self.output),
-             "--exclude", excludes[0], "--exclude", excludes[1]],
-        ])
+        self.assertEqual(
+            self.calls,
+            [
+                [self.executable, "--version"],
+                [
+                    self.executable,
+                    "extract",
+                    str(self.root),
+                    "--code-only",
+                    "--no-cluster",
+                    "--max-workers",
+                    "1",
+                    "--out",
+                    str(self.output),
+                    "--exclude",
+                    excludes[0],
+                    "--exclude",
+                    excludes[1],
+                ],
+            ],
+        )
         self.assert_record("complete")
         self.assertEqual(before, {path.name: path.read_bytes() for path in self.root.iterdir()})
 
@@ -132,11 +149,16 @@ class GraphifyTests(unittest.TestCase):
         self.assert_record("complete")
 
     def test_environment_is_clean_copy_without_mutating_process(self) -> None:
-        with patch.dict(os.environ, {
-            "GRAPHIFY_OUT": "/unwanted", "GRAPHIFY_API_KEY": "secret",
-            "GRAPHIFY_LLM": "enabled", "PYTHONDONTWRITEBYTECODE": "0",
-            "KIT_SENTINEL": "preserved",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "GRAPHIFY_OUT": "/unwanted",
+                "GRAPHIFY_API_KEY": "secret",
+                "GRAPHIFY_LLM": "enabled",
+                "PYTHONDONTWRITEBYTECODE": "0",
+                "KIT_SENTINEL": "preserved",
+            },
+        ):
             before = dict(os.environ)
             kit.graph(self.root, self.output)
             self.assertEqual(dict(os.environ), before)
@@ -165,16 +187,16 @@ class GraphifyTests(unittest.TestCase):
         file = self.base / "file"
         file.write_bytes(b"preserve")
         cases = (
-            (self.base / "missing", self.output), (file, self.output),
-            (self.root, self.root), (self.root, self.root / "nested"),
+            (self.base / "missing", self.output),
+            (file, self.output),
+            (self.root, self.root),
+            (self.root, self.root / "nested"),
             (self.root, self.base),
         )
         for source, output in cases:
             with self.subTest(source=source, output=output):
                 before = self.snapshot()
-                status, _, _ = self.cli(
-                    "graph", str(source), "--output", str(output), "--apply"
-                )
+                status, _, _ = self.cli("graph", str(source), "--output", str(output), "--apply")
                 self.assertEqual(status, 3)
                 self.assertEqual(self.snapshot(), before)
         self.runner.assert_not_called()
@@ -186,9 +208,7 @@ class GraphifyTests(unittest.TestCase):
         for output in (alias, alias / "nested"):
             with self.subTest(output=output):
                 before = self.snapshot()
-                self.assertEqual(self.cli(
-                    "graph", str(self.root), "--output", str(output), "--apply"
-                )[0], 3)
+                self.assertEqual(self.cli("graph", str(self.root), "--output", str(output), "--apply")[0], 3)
                 self.assertEqual(self.snapshot(), before)
         self.runner.assert_not_called()
 
@@ -202,14 +222,15 @@ class GraphifyTests(unittest.TestCase):
         broken = self.base / "broken output"
         broken.symlink_to(self.base / "missing")
         for source, output in (
-            (alias, self.output), (alias / ".." / self.root.name, self.output),
-            (self.root, link), (self.root, link / "nested"), (self.root, broken),
+            (alias, self.output),
+            (alias / ".." / self.root.name, self.output),
+            (self.root, link),
+            (self.root, link / "nested"),
+            (self.root, broken),
         ):
             with self.subTest(source=source, output=output):
                 before = self.snapshot()
-                self.assertEqual(self.cli(
-                    "graph", str(source), "--output", str(output), "--apply"
-                )[0], 3)
+                self.assertEqual(self.cli("graph", str(source), "--output", str(output), "--apply")[0], 3)
                 self.assertEqual(self.snapshot(), before)
         self.runner.assert_not_called()
 
@@ -268,11 +289,18 @@ class GraphifyTests(unittest.TestCase):
         self.assertTrue(self.output.is_dir())
 
     def test_missing_or_malformed_graph_keeps_failed_record_and_logs(self) -> None:
-        for index, payload in enumerate((
-            None, b"not json", b"[]", b"{}", b'{"nodes": [], "edges": []}',
-            b'{"nodes": {}, "edges": []}', b'{"nodes": [{}], "edges": {}}',
-            b'{"nodes": [{}]}',
-        )):
+        for index, payload in enumerate(
+            (
+                None,
+                b"not json",
+                b"[]",
+                b"{}",
+                b'{"nodes": [], "edges": []}',
+                b'{"nodes": {}, "edges": []}',
+                b'{"nodes": [{}], "edges": {}}',
+                b'{"nodes": [{}]}',
+            )
+        ):
             with self.subTest(payload=payload):
                 self.output = self.base / f"invalid graph {index}"
                 self.graph_bytes = payload

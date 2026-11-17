@@ -39,8 +39,7 @@ class KitTests(unittest.TestCase):
     def snapshot(self, root: Path) -> dict[str, bytes | str | None]:
         return {
             str(path.relative_to(root)): (
-                str(path.readlink()) if path.is_symlink()
-                else None if path.is_dir() else path.read_bytes()
+                str(path.readlink()) if path.is_symlink() else None if path.is_dir() else path.read_bytes()
             )
             for path in root.rglob("*")
         }
@@ -73,9 +72,7 @@ class KitTests(unittest.TestCase):
         self.assertFalse(output.exists())
 
     def test_prepare_writes_exact_templates_and_drafts_fail_check(self) -> None:
-        status, _, _ = self.cli(
-            "prepare", str(self.root), "--apply", "--authorities-reviewed"
-        )
+        status, _, _ = self.cli("prepare", str(self.root), "--apply", "--authorities-reviewed")
         self.assertEqual(status, 0)
         self.assertEqual(
             {p for p in self.root.rglob("*") if p.is_file()},
@@ -108,24 +105,18 @@ class KitTests(unittest.TestCase):
         kit.prepare(self.root)
         before = self.snapshot(self.root)
         self.assertEqual(self.cli("inspect", str(self.root))[0], 1)
-        self.assertEqual(self.cli(
-            "prepare", str(self.root), "--apply", "--authorities-reviewed"
-        )[0], 1)
+        self.assertEqual(self.cli("prepare", str(self.root), "--apply", "--authorities-reviewed")[0], 1)
         self.assertEqual(self.snapshot(self.root), before)
 
     def test_external_proposal_preserves_source_and_blocks_repeat(self) -> None:
         (self.root / "AGENTS.md").write_bytes(b"Existing instructions\n")
         before = self.snapshot(self.root)
         output = self.base / "new proposal" / "drafts"
-        status, _, _ = self.cli(
-            "prepare", str(self.root), "--output", str(output), "--apply"
-        )
+        status, _, _ = self.cli("prepare", str(self.root), "--output", str(output), "--apply")
         self.assertEqual(status, 0)
         self.assertEqual(self.snapshot(self.root), before)
         proposal = self.snapshot(output)
-        self.assertEqual(self.cli(
-            "prepare", str(self.root), "--output", str(output), "--apply"
-        )[0], 1)
+        self.assertEqual(self.cli("prepare", str(self.root), "--output", str(output), "--apply")[0], 1)
         self.assertEqual(self.snapshot(output), proposal)
         self.assertEqual(self.snapshot(self.root), before)
 
@@ -146,9 +137,7 @@ class KitTests(unittest.TestCase):
             with self.subTest(output=output):
                 with self.assertRaises(ValueError):
                     kit.prepare(self.root, output)
-                status, _, _ = self.cli(
-                    "prepare", str(self.root), "--output", str(output), "--apply"
-                )
+                status, _, _ = self.cli("prepare", str(self.root), "--output", str(output), "--apply")
                 self.assertEqual(status, 3)
                 self.assertEqual(self.snapshot(self.base), before)
 
@@ -248,9 +237,7 @@ class KitTests(unittest.TestCase):
             return original_open(path, mode, buffering, encoding, errors, newline)
 
         with patch.object(Path, "open", fail_second_creation):
-            status, _, stderr = self.cli(
-                "prepare", str(self.root), "--output", str(output), "--apply"
-            )
+            status, _, stderr = self.cli("prepare", str(self.root), "--output", str(output), "--apply")
         self.assertEqual(status, 3)
         self.assertIn("simulated write failure", stderr)
         self.assertEqual(creations, 2)
@@ -343,7 +330,8 @@ class KitTests(unittest.TestCase):
             "# Links\n[context](docs/agent/CONTEXT.md#unknown-anchor)\n"
             "[space](<a file.md>)\n[encoded](a%20file.md)\n"
             "[fragment](#unverified)\n[web](https://example.invalid/no-network)\n"
-            "[email](mailto:someone@example.invalid)\n", encoding="utf-8"
+            "[email](mailto:someone@example.invalid)\n",
+            encoding="utf-8",
         )
         (self.root / "docs/agent/CONTEXT.md").write_text(
             "# Context\n[entry](../../AGENTS.md)\n", encoding="utf-8"
@@ -362,9 +350,7 @@ class KitTests(unittest.TestCase):
         )
         for link, expected in cases:
             with self.subTest(link=link):
-                (self.root / "AGENTS.md").write_text(
-                    f"# Links\n[local](<{link}>)\n", encoding="utf-8"
-                )
+                (self.root / "AGENTS.md").write_text(f"# Links\n[local](<{link}>)\n", encoding="utf-8")
                 findings = kit.check(self.root)
                 self.assertEqual(len(findings), 1)
                 self.assertIn(expected, findings[0])
@@ -378,9 +364,7 @@ class KitTests(unittest.TestCase):
         (self.root / "linked").symlink_to(outside, target_is_directory=True)
         for link in ("link.md", "linked/file.md", "linked/../AGENTS.md"):
             with self.subTest(link=link):
-                (self.root / "AGENTS.md").write_text(
-                    f"# Links\n[local]({link})\n", encoding="utf-8"
-                )
+                (self.root / "AGENTS.md").write_text(f"# Links\n[local]({link})\n", encoding="utf-8")
                 self.assertEqual(len(kit.check(self.root)), 1)
 
     def test_code_examples_and_manual_link_forms_are_not_checked(self) -> None:
@@ -390,7 +374,8 @@ class KitTests(unittest.TestCase):
             "````markdown\n[example](absent.md)\n```\n"
             "[still code](absent.md)\n````\n"
             "~~~markdown\n[example](absent.md)\n~~~\n"
-            "[reference][manual]\n[manual]: absent.md\n", encoding="utf-8"
+            "[reference][manual]\n[manual]: absent.md\n",
+            encoding="utf-8",
         )
         self.assertEqual(kit.check(self.root), ())
 
@@ -399,9 +384,7 @@ class KitTests(unittest.TestCase):
         outside = self.base / "outside.md"
         outside.write_bytes(b"Outside\n")
         (self.root / "linked.md").symlink_to(outside)
-        (self.root / "AGENTS.md").write_text(
-            "# Links\n[external](missing/../linked.md)\n", encoding="utf-8"
-        )
+        (self.root / "AGENTS.md").write_text("# Links\n[external](missing/../linked.md)\n", encoding="utf-8")
         before = self.snapshot(self.base)
         self.assertEqual(len(kit.check(self.root)), 1)
         self.assertEqual(self.cli("check", str(self.root))[0], 1)
@@ -411,9 +394,7 @@ class KitTests(unittest.TestCase):
         output = self.base / "proposal"
         for command in ("inspect", "check"):
             self.assertEqual(self.cli(command, str(disguised))[0], 3)
-        self.assertEqual(self.cli(
-            "prepare", str(disguised), "--output", str(output), "--apply"
-        )[0], 3)
+        self.assertEqual(self.cli("prepare", str(disguised), "--output", str(output), "--apply")[0], 3)
         self.assertFalse(output.exists())
         self.assertEqual(self.snapshot(self.base), before | {"linked-root": str(self.root)})
 
@@ -421,9 +402,7 @@ class KitTests(unittest.TestCase):
         self.complete_documents()
         entry = self.root / "AGENTS.md"
         before = entry.read_bytes()
-        (self.root / "AGENTS.md").write_text(
-            "# Links\n[directory](docs/agent)\n", encoding="utf-8"
-        )
+        (self.root / "AGENTS.md").write_text("# Links\n[directory](docs/agent)\n", encoding="utf-8")
         self.assertEqual(len(kit.check(self.root)), 1)
         self.assertEqual(self.cli("check", str(self.root))[0], 1)
         entry.write_bytes(before)

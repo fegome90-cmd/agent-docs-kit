@@ -6,12 +6,12 @@ import copy
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 KIT = Path(__file__).resolve().parents[1]
@@ -33,8 +33,7 @@ class LivingDocsTests(unittest.TestCase):
         self.output = self.base / "snapshot.json"
 
     def capture(self, **kwargs: object) -> dict:
-        arguments = dict(root=self.root, sources=["src"],
-                         documents=["README.md"], output=self.output)
+        arguments = dict(root=self.root, sources=["src"], documents=["README.md"], output=self.output)
         arguments.update(kwargs)
         return living.snapshot(**arguments)
 
@@ -47,8 +46,9 @@ class LivingDocsTests(unittest.TestCase):
         self.output.write_text(json.dumps(payload), encoding="utf-8")
 
     def contents(self) -> dict[str, bytes]:
-        return {p.relative_to(self.root).as_posix(): p.read_bytes()
-                for p in self.root.rglob("*") if p.is_file()}
+        return {
+            p.relative_to(self.root).as_posix(): p.read_bytes() for p in self.root.rglob("*") if p.is_file()
+        }
 
     def test_snapshot_records_only_relative_evidence_and_preserves_source_bytes(self) -> None:
         binary = b"\x00\xffprivate byte payload\x00" * 90000
@@ -70,10 +70,14 @@ class LivingDocsTests(unittest.TestCase):
         self.assertEqual(manifest["source_scopes"], [{"path": "src", "kind": "directory"}])
         self.assertEqual(manifest["source_directories"], ["src", "src/empty"])
         files = {item["path"]: item for item in manifest["sources"]}
-        self.assertEqual(files["src/binary.dat"], {
-            "path": "src/binary.dat", "size": len(binary),
-            "sha256": hashlib.sha256(binary).hexdigest(),
-        })
+        self.assertEqual(
+            files["src/binary.dat"],
+            {
+                "path": "src/binary.dat",
+                "size": len(binary),
+                "sha256": hashlib.sha256(binary).hexdigest(),
+            },
+        )
         serialized = self.output.read_text(encoding="utf-8")
         self.assertNotIn(str(self.root), serialized)
         self.assertNotIn("private byte payload", serialized)
@@ -101,10 +105,14 @@ class LivingDocsTests(unittest.TestCase):
         (self.root / "src/new.py").write_bytes(b"new = True\n")
         result = self.report()
         self.assertEqual(result["state"], "review_required")
-        self.assertEqual(result["sources"], {
-            "added": ["src/new.py", "src/renamed.py"],
-            "modified": ["src/main.py"], "deleted": ["src/remove.py"],
-        })
+        self.assertEqual(
+            result["sources"],
+            {
+                "added": ["src/new.py", "src/renamed.py"],
+                "modified": ["src/main.py"],
+                "deleted": ["src/remove.py"],
+            },
+        )
         self.assertEqual(result["documents"]["modified"], [])
 
     def test_out_of_scope_changes_do_not_expand_declared_coverage(self) -> None:
@@ -119,9 +127,14 @@ class LivingDocsTests(unittest.TestCase):
         (self.root / "notes.md").unlink()
         result = self.report()
         self.assertEqual(result["state"], "review_required")
-        self.assertEqual(result["documents"], {
-            "added": [], "modified": ["README.md"], "deleted": ["notes.md"],
-        })
+        self.assertEqual(
+            result["documents"],
+            {
+                "added": [],
+                "modified": ["README.md"],
+                "deleted": ["notes.md"],
+            },
+        )
 
     def test_deleted_file_and_empty_directory_scopes_require_review(self) -> None:
         self.capture(sources=["src/main.py", "src/empty"])
@@ -130,10 +143,13 @@ class LivingDocsTests(unittest.TestCase):
         result = self.report()
         self.assertEqual(result["state"], "review_required")
         self.assertEqual(result["sources"]["deleted"], ["src/main.py"])
-        self.assertEqual(result["scope_changes"], [
-            {"path": "src/empty", "before": "directory", "after": "missing"},
-            {"path": "src/main.py", "before": "file", "after": "missing"},
-        ])
+        self.assertEqual(
+            result["scope_changes"],
+            [
+                {"path": "src/empty", "before": "directory", "after": "missing"},
+                {"path": "src/main.py", "before": "file", "after": "missing"},
+            ],
+        )
         self.assertEqual(result["directory_changes"]["deleted"], ["src/empty"])
 
     def test_deleted_directory_scope_reports_every_previously_observed_file(self) -> None:
@@ -142,9 +158,12 @@ class LivingDocsTests(unittest.TestCase):
         result = self.report()
         self.assertEqual(result["state"], "review_required")
         self.assertEqual(result["sources"]["deleted"], ["src/main.py", "src/remove.py"])
-        self.assertEqual(result["scope_changes"], [
-            {"path": "src", "before": "directory", "after": "missing"},
-        ])
+        self.assertEqual(
+            result["scope_changes"],
+            [
+                {"path": "src", "before": "directory", "after": "missing"},
+            ],
+        )
 
     def test_scope_kind_changes_cannot_produce_false_green(self) -> None:
         self.capture(sources=["src/main.py", "src/empty"])
@@ -154,10 +173,13 @@ class LivingDocsTests(unittest.TestCase):
         (self.root / "src/empty").write_bytes(b"now a file")
         result = self.report()
         self.assertEqual(result["state"], "review_required")
-        self.assertEqual(result["scope_changes"], [
-            {"path": "src/empty", "before": "directory", "after": "file"},
-            {"path": "src/main.py", "before": "file", "after": "directory"},
-        ])
+        self.assertEqual(
+            result["scope_changes"],
+            [
+                {"path": "src/empty", "before": "directory", "after": "file"},
+                {"path": "src/main.py", "before": "file", "after": "directory"},
+            ],
+        )
         self.assertEqual(result["sources"]["added"], ["src/empty"])
         self.assertEqual(result["sources"]["deleted"], ["src/main.py"])
 
@@ -167,9 +189,13 @@ class LivingDocsTests(unittest.TestCase):
         (self.root / "src/new empty").mkdir()
         result = self.report()
         self.assertEqual(result["state"], "review_required")
-        self.assertEqual(result["directory_changes"], {
-            "added": ["src/new empty"], "deleted": ["src/empty"],
-        })
+        self.assertEqual(
+            result["directory_changes"],
+            {
+                "added": ["src/new empty"],
+                "deleted": ["src/empty"],
+            },
+        )
 
     def test_file_scope_becoming_directory_does_not_authorize_reading_new_children(self) -> None:
         self.capture(sources=["src/main.py"])
@@ -188,12 +214,20 @@ class LivingDocsTests(unittest.TestCase):
         with patch.object(living.os, "open", forbidden):
             result = self.report()
         self.assertEqual(result["state"], "review_required")
-        self.assertEqual(result["sources"], {
-            "added": [], "modified": [], "deleted": ["src/main.py"],
-        })
-        self.assertEqual(result["scope_changes"], [
-            {"path": "src/main.py", "before": "file", "after": "directory"},
-        ])
+        self.assertEqual(
+            result["sources"],
+            {
+                "added": [],
+                "modified": [],
+                "deleted": ["src/main.py"],
+            },
+        )
+        self.assertEqual(
+            result["scope_changes"],
+            [
+                {"path": "src/main.py", "before": "file", "after": "directory"},
+            ],
+        )
 
     def test_an_original_parent_directory_scope_still_covers_new_children(self) -> None:
         manifest = self.capture(sources=["src", "src/main.py"])
@@ -232,8 +266,7 @@ class LivingDocsTests(unittest.TestCase):
     def test_excluded_explicit_scopes_and_documents_are_errors(self) -> None:
         (self.root / "node_modules").mkdir()
         (self.root / "node_modules/doc.md").write_bytes(b"ignored")
-        for parameters in ({"sources": ["node_modules"]},
-                           {"documents": ["node_modules/doc.md"]}):
+        for parameters in ({"sources": ["node_modules"]}, {"documents": ["node_modules/doc.md"]}):
             with self.subTest(parameters=parameters), self.assertRaises(ValueError):
                 self.capture(**parameters)
         self.assertFalse(self.output.exists())
@@ -247,15 +280,27 @@ class LivingDocsTests(unittest.TestCase):
         self.assertEqual(self.report()["state"], "unchanged_since_snapshot")
 
     def test_invalid_and_duplicate_normalized_paths_fail_before_writing(self) -> None:
-        invalid = ["", "../outside", "src/../README.md", "/tmp/source", "C:\\source",
-                   "C:source", "src\\main.py", "src/\x00bad"]
+        invalid = [
+            "",
+            "../outside",
+            "src/../README.md",
+            "/tmp/source",
+            "C:\\source",
+            "C:source",
+            "src\\main.py",
+            "src/\x00bad",
+        ]
         for value in invalid:
             with self.subTest(path=value), self.assertRaises(ValueError):
                 self.capture(sources=[value])
-        for parameters in ({"sources": []}, {"documents": []},
-                           {"sources": ["src", "./src"]},
-                           {"documents": ["README.md", "./README.md"]},
-                           {"sources": "src"}, {"documents": ["src"]}):
+        for parameters in (
+            {"sources": []},
+            {"documents": []},
+            {"sources": ["src", "./src"]},
+            {"documents": ["README.md", "./README.md"]},
+            {"sources": "src"},
+            {"documents": ["src"]},
+        ):
             with self.subTest(parameters=parameters), self.assertRaises(ValueError):
                 self.capture(**parameters)
         self.assertFalse(self.output.exists())
@@ -277,8 +322,7 @@ class LivingDocsTests(unittest.TestCase):
         self.assertEqual(self.contents(), before)
 
     def test_output_cannot_observe_itself_as_source_or_document(self) -> None:
-        for output in (self.root / "src/evidence.json", self.root / "src/main.py",
-                       self.root / "README.md"):
+        for output in (self.root / "src/evidence.json", self.root / "src/main.py", self.root / "README.md"):
             with self.subTest(output=output), self.assertRaises(ValueError):
                 self.capture(output=output)
         self.assertFalse((self.root / "src/evidence.json").exists())
@@ -359,8 +403,14 @@ class LivingDocsTests(unittest.TestCase):
 
     def test_corrupt_unknown_and_duplicate_key_json_are_errors(self) -> None:
         self.capture()
-        for raw in ("{broken", "[]", "null", '{"schema": "a", "schema": "b"}',
-                    '{"number": NaN}', '"not a manifest"'):
+        for raw in (
+            "{broken",
+            "[]",
+            "null",
+            '{"schema": "a", "schema": "b"}',
+            '{"number": NaN}',
+            '"not a manifest"',
+        ):
             with self.subTest(raw=raw):
                 self.output.write_text(raw, encoding="utf-8")
                 with self.assertRaises(ValueError):
@@ -494,8 +544,9 @@ class LivingDocsTests(unittest.TestCase):
         self.assertIsNone(manifest["git_head"])
         self.assertEqual(result["git"], {"snapshot_head": None, "current_head": None})
         self.output.unlink()
-        with patch.object(living.shutil, "which", return_value="/usr/bin/git"), patch.object(
-            living.subprocess, "run", side_effect=subprocess.TimeoutExpired(["git"], 3)
+        with (
+            patch.object(living.shutil, "which", return_value="/usr/bin/git"),
+            patch.object(living.subprocess, "run", side_effect=subprocess.TimeoutExpired(["git"], 3)),
         ):
             self.assertIsNone(self.capture()["git_head"])
 
@@ -504,18 +555,39 @@ class LivingDocsTests(unittest.TestCase):
         executable = shutil.which("git")
 
         def git(*args: str) -> None:
-            subprocess.run([executable, *args], cwd=self.root, check=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                           env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")})
+            subprocess.run(
+                [executable, *args],
+                cwd=self.root,
+                check=True,
+                capture_output=True,
+                env={k: v for k, v in os.environ.items() if not k.startswith("GIT_")},
+            )
 
         git("init")
         git("add", ".")
-        git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
-            "commit", "-m", "fixture", "--no-gpg-sign")
+        git(
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "-m",
+            "fixture",
+            "--no-gpg-sign",
+        )
         baseline = self.capture()
         self.assertRegex(baseline["git_head"], r"^[0-9a-f]{40,64}$")
-        git("-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid",
-            "commit", "--allow-empty", "-m", "context only", "--no-gpg-sign")
+        git(
+            "-c",
+            "user.name=Fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "context only",
+            "--no-gpg-sign",
+        )
         result = self.report()
         self.assertEqual(result["state"], "unchanged_since_snapshot")
         self.assertNotEqual(result["git"]["snapshot_head"], result["git"]["current_head"])
@@ -525,8 +597,9 @@ class LivingDocsTests(unittest.TestCase):
     def test_git_executable_inside_the_inspected_repository_is_never_run(self) -> None:
         executable = self.root / "git"
         marker = self.base / "executed"
-        executable.write_text(f"#!{sys.executable}\nfrom pathlib import Path\n"
-                              f"Path({str(marker)!r}).touch()\n", encoding="utf-8")
+        executable.write_text(
+            f"#!{sys.executable}\nfrom pathlib import Path\nPath({str(marker)!r}).touch()\n", encoding="utf-8"
+        )
         executable.chmod(0o700)
         with patch.object(living.shutil, "which", return_value=str(executable)):
             self.assertIsNone(self.capture()["git_head"])

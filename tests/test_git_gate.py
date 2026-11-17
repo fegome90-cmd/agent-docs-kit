@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 from uuid import UUID
 
@@ -38,19 +38,40 @@ class GitGateTests(unittest.TestCase):
         self.git("add", "--", "src", "README.md", self.SNAPSHOT)
         self.commit("fixture baseline")
 
-    def git(self, *arguments: str, input: bytes | None = None,
-            extra_env: dict[str, str] | None = None) -> bytes:
+    def git(
+        self, *arguments: str, input: bytes | None = None, extra_env: dict[str, str] | None = None
+    ) -> bytes:
         environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
-        environment.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
-                           GIT_OPTIONAL_LOCKS="0", GIT_TERMINAL_PROMPT="0")
+        environment.update(
+            GIT_CONFIG_NOSYSTEM="1",
+            GIT_CONFIG_GLOBAL=os.devnull,
+            GIT_OPTIONAL_LOCKS="0",
+            GIT_TERMINAL_PROMPT="0",
+        )
         if extra_env:
             environment.update(extra_env)
         result = subprocess.run(
-            [shutil.which("git"), "--no-pager", "--no-optional-locks",
-             "-c", "core.fsmonitor=false", "-c", f"core.hooksPath={os.devnull}",
-             "-c", "user.name=Index Fixture", "-c", "user.email=index-fixture@example.invalid",
-             "-C", str(self.root), *arguments],
-            input=input, capture_output=True, check=False, timeout=20, env=environment,
+            [
+                shutil.which("git"),
+                "--no-pager",
+                "--no-optional-locks",
+                "-c",
+                "core.fsmonitor=false",
+                "-c",
+                f"core.hooksPath={os.devnull}",
+                "-c",
+                "user.name=Index Fixture",
+                "-c",
+                "user.email=index-fixture@example.invalid",
+                "-C",
+                str(self.root),
+                *arguments,
+            ],
+            input=input,
+            capture_output=True,
+            check=False,
+            timeout=20,
+            env=environment,
         )
         self.assertEqual(result.returncode, 0, result.stderr.decode("utf-8", errors="replace"))
         return result.stdout
@@ -79,11 +100,15 @@ class GitGateTests(unittest.TestCase):
         events = []
         for sequence in range(1, count + 1):
             event = {
-                "schema_version": 1, "event_id": str(UUID(int=sequence)),
-                "idempotency_key": f"fixture-{sequence}", "session_id": self.SESSION,
-                "sequence": sequence, "occurred_at": "2026-11-13T12:00:00Z",
+                "schema_version": 1,
+                "event_id": str(UUID(int=sequence)),
+                "idempotency_key": f"fixture-{sequence}",
+                "session_id": self.SESSION,
+                "sequence": sequence,
+                "occurred_at": "2026-11-13T12:00:00Z",
                 "kind": "session.closed" if closed and sequence == count else "work.logged",
-                "source": "test", "payload": {"summary": f"event {sequence}"},
+                "source": "test",
+                "payload": {"summary": f"event {sequence}"},
             }
             events.append(json.dumps(event, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n")
         return b"".join(events)
@@ -137,8 +162,9 @@ class GitGateTests(unittest.TestCase):
         self.capture()
         self.git("add", "--", self.SNAPSHOT)
         # The worktree matches the snapshot; the proposed index still has VALUE=1.
-        self.assertEqual(living_docs.status(self.root, self.root / self.SNAPSHOT)["state"],
-                         "unchanged_since_snapshot")
+        self.assertEqual(
+            living_docs.status(self.root, self.root / self.SNAPSHOT)["state"], "unchanged_since_snapshot"
+        )
         report = self.assert_read_only(self.check)
         self.assertEqual(report["state"], "review_required")
         self.assertEqual(report["sources"]["modified"], ["src/main.py"])
@@ -193,8 +219,10 @@ class GitGateTests(unittest.TestCase):
         original = (self.root / self.SNAPSHOT).read_bytes()
         invalid = json.loads(original)
         invalid["schema_version"] = 999
-        for data in (json.dumps(invalid).encode(), original.replace(b'"schema_version": 1',
-                                                                   b'"schema_version": 1, "schema_version": 1')):
+        for data in (
+            json.dumps(invalid).encode(),
+            original.replace(b'"schema_version": 1', b'"schema_version": 1, "schema_version": 1'),
+        ):
             with self.subTest(data=data[:60]):
                 self.write(self.SNAPSHOT, data)
                 self.git("add", "--", self.SNAPSHOT)
@@ -211,9 +239,14 @@ class GitGateTests(unittest.TestCase):
         self.git("mv", "--", "src/main.py", "src/renamed.py")
         self.write("src/new.py", b"NEW = True\n")
         self.git("add", "--", "src/new.py")
-        self.assertEqual(self.check()["sources"], {
-            "added": ["src/new.py", "src/renamed.py"], "modified": [], "deleted": ["src/main.py"],
-        })
+        self.assertEqual(
+            self.check()["sources"],
+            {
+                "added": ["src/new.py", "src/renamed.py"],
+                "modified": [],
+                "deleted": ["src/main.py"],
+            },
+        )
 
     def test_empty_directories_cannot_be_claimed_present_in_git(self) -> None:
         (self.root / "src/empty").mkdir()
@@ -232,7 +265,9 @@ class GitGateTests(unittest.TestCase):
         self.git("add", "-A", "--", "src")
         report = self.check()
         self.assertEqual(report["sources"], {"added": [], "modified": [], "deleted": ["src/main.py"]})
-        self.assertEqual(report["scope_changes"], [{"path": "src/main.py", "before": "file", "after": "directory"}])
+        self.assertEqual(
+            report["scope_changes"], [{"path": "src/main.py", "before": "file", "after": "directory"}]
+        )
 
     def test_excluded_index_paths_and_out_of_scope_changes_do_not_expand_coverage(self) -> None:
         self.write("src/node_modules/ignored", b"excluded\n")
@@ -263,7 +298,9 @@ class GitGateTests(unittest.TestCase):
         first = self.git("hash-object", "-w", "--stdin", input=b"first\n").decode().strip()
         second = self.git("hash-object", "-w", "--stdin", input=b"second\n").decode().strip()
         self.git("update-index", "--force-remove", "src/main.py")
-        records = f"100644 {first} 1\tsrc/main.py\n100644 {first} 2\tsrc/main.py\n100644 {second} 3\tsrc/main.py\n"
+        records = (
+            f"100644 {first} 1\tsrc/main.py\n100644 {first} 2\tsrc/main.py\n100644 {second} 3\tsrc/main.py\n"
+        )
         self.git("update-index", "--index-info", input=records.encode())
         with self.assertRaisesRegex(ValueError, "conflicto"):
             self.check()
@@ -318,8 +355,14 @@ class GitGateTests(unittest.TestCase):
         self.git("mv", "--", path, target)
         report = self.assert_read_only(self.check)
         self.assertEqual(report["state"], "review_required")
-        self.assertIn({"path": path, "reason": "deleted", "detail": "Un segmento de HEAD no puede borrarse ni renombrarse."},
-                      report["history"]["violations"])
+        self.assertIn(
+            {
+                "path": path,
+                "reason": "deleted",
+                "detail": "Un segmento de HEAD no puede borrarse ni renombrarse.",
+            },
+            report["history"]["violations"],
+        )
 
     def test_history_valid_json_prefix_rewrite_is_rejected(self) -> None:
         path = self.track_history(self.segment())
@@ -377,10 +420,16 @@ class GitGateTests(unittest.TestCase):
 
     def facts_fixture(self) -> str:
         path = "docs/living/facts.json"
-        manifest = {"schema_version": 1, "facts": [{
-            "id": "release", "canonical": {"file": "VERSION", "pattern": r"release=(\d+)"},
-            "copies": [{"file": "notes.md", "pattern": r"release=(\d+)"}],
-        }]}
+        manifest = {
+            "schema_version": 1,
+            "facts": [
+                {
+                    "id": "release",
+                    "canonical": {"file": "VERSION", "pattern": r"release=(\d+)"},
+                    "copies": [{"file": "notes.md", "pattern": r"release=(\d+)"}],
+                }
+            ],
+        }
         self.write(path, json.dumps(manifest).encode())
         self.write("VERSION", b"release=1\n")
         self.write("notes.md", b"release=1\n")

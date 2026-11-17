@@ -7,11 +7,11 @@ import errno
 import json
 import multiprocessing
 import os
-from pathlib import Path
 import sys
 import tempfile
 import time
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -20,16 +20,18 @@ sys.path.insert(0, str(KIT))
 import history
 
 
-def _writer(root: str, session: str, group: str, count: int, start: object,
-            results: object, same_key: bool = False) -> None:
+def _writer(
+    root: str, session: str, group: str, count: int, start: object, results: object, same_key: bool = False
+) -> None:
     try:
         if not start.wait(10):
             raise RuntimeError("No start signal")
         events = []
         for number in range(count):
             key = "shared" if same_key else f"{group}-{number}"
-            event = history.append_event(Path(root), history.DEFAULT_HISTORY, session,
-                                         "work.logged", {"summary": key}, key, timeout=10)
+            event = history.append_event(
+                Path(root), history.DEFAULT_HISTORY, session, "work.logged", {"summary": key}, key, timeout=10
+            )
             events.append(event)
         results.put(("ok", events))
     except BaseException as exc:
@@ -38,6 +40,7 @@ def _writer(root: str, session: str, group: str, count: int, start: object,
 
 def _hold_lock(path: str, ready: object, release: object) -> None:
     import portalocker
+
     with portalocker.Lock(path, mode="ab", timeout=5):
         ready.set()
         release.wait(10)
@@ -57,32 +60,50 @@ class HistoryTests(unittest.TestCase):
         self.lock_path = self.directory / f"{self.session}.jsonl.lock"
 
     def append(self, key: str = "first", **kwargs: object) -> dict:
-        options = {"root": self.root, "history": self.relative, "session": self.session,
-                   "kind": "work.logged", "payload": {"summary": "Cambio revisado"},
-                   "idempotency_key": key}
+        options = {
+            "root": self.root,
+            "history": self.relative,
+            "session": self.session,
+            "kind": "work.logged",
+            "payload": {"summary": "Cambio revisado"},
+            "idempotency_key": key,
+        }
         options.update(kwargs)
         return history.append_event(**options)
 
     def row(self, **kwargs: object) -> dict:
-        event = {"schema_version": 1, "event_id": str(uuid4()),
-                 "idempotency_key": "fixture-1", "session_id": self.session,
-                 "sequence": 1, "occurred_at": "2026-11-13T12:34:56.123456Z",
-                 "kind": "work.logged", "source": "test", "payload": {"summary": "Uno"}}
+        event = {
+            "schema_version": 1,
+            "event_id": str(uuid4()),
+            "idempotency_key": "fixture-1",
+            "session_id": self.session,
+            "sequence": 1,
+            "occurred_at": "2026-11-13T12:34:56.123456Z",
+            "kind": "work.logged",
+            "source": "test",
+            "payload": {"summary": "Uno"},
+        }
         event.update(kwargs)
         return event
 
     @staticmethod
     def encode(*events: dict) -> bytes:
-        return b"".join((json.dumps(event, ensure_ascii=True) + "\n").encode("utf-8")
-                        for event in events)
+        return b"".join((json.dumps(event, ensure_ascii=True) + "\n").encode("utf-8") for event in events)
 
     def snapshot(self) -> dict[str, bytes | None]:
-        return {path.relative_to(self.root).as_posix(): path.read_bytes() if path.is_file() else None
-                for path in self.root.rglob("*")}
+        return {
+            path.relative_to(self.root).as_posix(): path.read_bytes() if path.is_file() else None
+            for path in self.root.rglob("*")
+        }
 
     def test_appends_exact_fields_and_preserves_existing_prefix(self) -> None:
-        first = self.append(payload={"summary": "Añadí documentación", "files": ["README.md"],
-                                     "commands": ["python -B check.py"]})
+        first = self.append(
+            payload={
+                "summary": "Añadí documentación",
+                "files": ["README.md"],
+                "commands": ["python -B check.py"],
+            }
+        )
         prefix = self.path.read_bytes()
         self.lock_path.write_bytes(b"persistent sidecar metadata\n")
         second = self.append("second", payload={"summary": "Verificación"})
@@ -90,9 +111,20 @@ class HistoryTests(unittest.TestCase):
         self.assertTrue(data.startswith(prefix))
         self.assertTrue(data.endswith(b"\n"))
         self.assertEqual(history.parse_segment(data, self.session), [first, second])
-        self.assertEqual(set(first), {"schema_version", "event_id", "idempotency_key",
-                                     "session_id", "sequence", "occurred_at", "kind",
-                                     "source", "payload"})
+        self.assertEqual(
+            set(first),
+            {
+                "schema_version",
+                "event_id",
+                "idempotency_key",
+                "session_id",
+                "sequence",
+                "occurred_at",
+                "kind",
+                "source",
+                "payload",
+            },
+        )
         self.assertEqual([first["sequence"], second["sequence"]], [1, 2])
         self.assertNotEqual(first["event_id"], second["event_id"])
         self.assertIn("Añadí".encode(), prefix)
@@ -101,9 +133,18 @@ class HistoryTests(unittest.TestCase):
         self.assertEqual(report["state"], "valid")
         self.assertEqual(report["event_count"], 2)
         self.assertEqual(report["semantic_review"], "not_attested")
-        self.assertEqual(report["sessions"], [{"session_id": self.session,
-                         "path": self.path.relative_to(self.root).as_posix(),
-                         "state": "open", "event_count": 2, "last_sequence": 2}])
+        self.assertEqual(
+            report["sessions"],
+            [
+                {
+                    "session_id": self.session,
+                    "path": self.path.relative_to(self.root).as_posix(),
+                    "state": "open",
+                    "event_count": 2,
+                    "last_sequence": 2,
+                }
+            ],
+        )
 
     def test_existing_noncanonical_json_bytes_are_not_reserialized(self) -> None:
         self.directory.mkdir(parents=True)
@@ -124,9 +165,13 @@ class HistoryTests(unittest.TestCase):
     def test_reusing_a_key_with_different_content_never_appends(self) -> None:
         self.append(payload={"value": 1})
         before = self.path.read_bytes()
-        for changes in ({"payload": {"value": 2}}, {"payload": {"value": True}},
-                        {"payload": {"value": 1.0}}, {"kind": "docs.checked"},
-                        {"source": "another-writer"}):
+        for changes in (
+            {"payload": {"value": 2}},
+            {"payload": {"value": True}},
+            {"payload": {"value": 1.0}},
+            {"kind": "docs.checked"},
+            {"source": "another-writer"},
+        ):
             options = {"payload": {"value": 1}, **changes}
             with self.subTest(changes=changes), self.assertRaisesRegex(ValueError, "Conflicto"):
                 self.append(**options)
@@ -196,7 +241,7 @@ class HistoryTests(unittest.TestCase):
                 return self.stream.__exit__(*arguments)
 
             def write(self, data: bytes) -> int:
-                return self.stream.write(data[:len(data) // 2])
+                return self.stream.write(data[: len(data) // 2])
 
         def partially_writing(descriptor: int, mode: str) -> object:
             return ShortWriter(actual_fdopen(descriptor, mode))
@@ -215,29 +260,45 @@ class HistoryTests(unittest.TestCase):
     def test_incomplete_and_corrupt_segments_fail_without_changing_bytes(self) -> None:
         self.append()
         prefix = self.path.read_bytes()
-        corruptions = [prefix + b'{"payload":', prefix + b"not json\n",
-                       prefix + b"\n", prefix + b'{"x": 1, "x": 2}\n',
-                       prefix[:-1], prefix + b"\xff\n"]
+        corruptions = [
+            prefix + b'{"payload":',
+            prefix + b"not json\n",
+            prefix + b"\n",
+            prefix + b'{"x": 1, "x": 2}\n',
+            prefix[:-1],
+            prefix + b"\xff\n",
+        ]
         for data in corruptions:
             with self.subTest(data=data[-30:]):
                 self.path.write_bytes(data)
-                for operation in (lambda: self.append("new"),
-                                  lambda: history.verify_history(self.root, self.relative),
-                                  lambda: history.render_history(self.root, self.relative)):
+                for operation in (
+                    lambda: self.append("new"),
+                    lambda: history.verify_history(self.root, self.relative),
+                    lambda: history.render_history(self.root, self.relative),
+                ):
                     with self.assertRaises(ValueError):
                         operation()
                     self.assertEqual(self.path.read_bytes(), data)
 
     def test_parser_rejects_bad_contract_values(self) -> None:
-        invalid = [self.row(schema_version=True), self.row(schema_version=2),
-                   self.row(sequence=True), self.row(sequence=0), self.row(sequence=2),
-                   self.row(sequence=1.0), self.row(event_id="not-a-uuid"),
-                   self.row(session_id=self.session.upper()), self.row(idempotency_key=""),
-                   self.row(source="\ncli"), self.row(kind="Invalid kind"),
-                   self.row(occurred_at="2026-02-30T12:00:00Z"),
-                   self.row(occurred_at="2026-11-13T12:00:00+00:00"),
-                   self.row(payload=[]), self.row(payload={"x": "\ud800"}),
-                   self.row(extra="unknown field")]
+        invalid = [
+            self.row(schema_version=True),
+            self.row(schema_version=2),
+            self.row(sequence=True),
+            self.row(sequence=0),
+            self.row(sequence=2),
+            self.row(sequence=1.0),
+            self.row(event_id="not-a-uuid"),
+            self.row(session_id=self.session.upper()),
+            self.row(idempotency_key=""),
+            self.row(source="\ncli"),
+            self.row(kind="Invalid kind"),
+            self.row(occurred_at="2026-02-30T12:00:00Z"),
+            self.row(occurred_at="2026-11-13T12:00:00+00:00"),
+            self.row(payload=[]),
+            self.row(payload={"x": "\ud800"}),
+            self.row(extra="unknown field"),
+        ]
         missing = self.row()
         del missing["source"]
         invalid.append(missing)
@@ -250,9 +311,14 @@ class HistoryTests(unittest.TestCase):
 
     def test_parser_rejects_duplicate_keys_and_nonfinite_numbers_at_any_depth(self) -> None:
         baseline = self.encode(self.row(payload={"x": 0}))
-        replacements = [b'{"x": 0, "x": 1}', b'{"nested": {"a": 1, "a": 2}}',
-                        b'{"x": NaN}', b'{"x": Infinity}', b'{"x": -Infinity}',
-                        b'{"x": 1e999}']
+        replacements = [
+            b'{"x": 0, "x": 1}',
+            b'{"nested": {"a": 1, "a": 2}}',
+            b'{"x": NaN}',
+            b'{"x": Infinity}',
+            b'{"x": -Infinity}',
+            b'{"x": 1e999}',
+        ]
         for replacement in replacements:
             data = baseline.replace(b'{"x": 0}', replacement)
             with self.subTest(replacement=replacement), self.assertRaises(ValueError):
@@ -264,24 +330,42 @@ class HistoryTests(unittest.TestCase):
     def test_parser_rejects_duplicate_ids_keys_mixed_sessions_and_gaps(self) -> None:
         first = self.row()
         second = self.row(sequence=2, idempotency_key="second")
-        for changes in ({"event_id": first["event_id"]}, {"idempotency_key": first["idempotency_key"]},
-                        {"session_id": str(uuid4())}, {"sequence": 3}):
+        for changes in (
+            {"event_id": first["event_id"]},
+            {"idempotency_key": first["idempotency_key"]},
+            {"session_id": str(uuid4())},
+            {"sequence": 3},
+        ):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 history.parse_segment(self.encode(first, {**second, **changes}), self.session)
         with self.assertRaisesRegex(ValueError, "no coincide"):
             history.parse_segment(self.encode(first), str(uuid4()))
 
     def test_bad_append_arguments_create_no_files_or_directories(self) -> None:
-        invalid = [{"session": "../escape"}, {"session": self.session.upper()},
-                   {"idempotency_key": ""}, {"kind": "Bad kind"}, {"source": "\x00"},
-                   {"payload": []}, {"payload": {1: "number key"}},
-                   {"payload": {"x": float("nan")}}, {"payload": {"x": float("inf")}},
-                   {"payload": {"x": (1, 2)}}, {"payload": {"x": "\udfff"}},
-                   {"timeout": True}, {"timeout": -1}, {"timeout": float("inf")},
-                   {"history": "/tmp/outside"}, {"history": "../outside"},
-                   {"history": "docs/../outside"}, {"history": "."},
-                   {"history": "docs//history"}, {"history": "docs/history/"},
-                   {"history": "C:/history"}, {"history": "docs\\history"}]
+        invalid = [
+            {"session": "../escape"},
+            {"session": self.session.upper()},
+            {"idempotency_key": ""},
+            {"kind": "Bad kind"},
+            {"source": "\x00"},
+            {"payload": []},
+            {"payload": {1: "number key"}},
+            {"payload": {"x": float("nan")}},
+            {"payload": {"x": float("inf")}},
+            {"payload": {"x": (1, 2)}},
+            {"payload": {"x": "\udfff"}},
+            {"timeout": True},
+            {"timeout": -1},
+            {"timeout": float("inf")},
+            {"history": "/tmp/outside"},
+            {"history": "../outside"},
+            {"history": "docs/../outside"},
+            {"history": "."},
+            {"history": "docs//history"},
+            {"history": "docs/history/"},
+            {"history": "C:/history"},
+            {"history": "docs\\history"},
+        ]
         for changes in invalid:
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 self.append(**changes)
@@ -293,9 +377,8 @@ class HistoryTests(unittest.TestCase):
             nested = {"x": nested}
         with self.assertRaisesRegex(ValueError, "profundidad"):
             self.append(payload=nested)
-        with patch.object(history, "MAX_EVENT_BYTES", 100):
-            with self.assertRaises(ValueError):
-                self.append(payload={"x": "x" * 200})
+        with patch.object(history, "MAX_EVENT_BYTES", 100), self.assertRaises(ValueError):
+            self.append(payload={"x": "x" * 200})
         self.assertFalse(self.directory.exists())
         self.append()
         prefix = self.path.read_bytes()
@@ -316,9 +399,11 @@ class HistoryTests(unittest.TestCase):
             self.assertEqual(flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND), 0)
             return real_open(path, flags, *args, **kwargs)
 
-        with patch.object(history.os, "open", side_effect=read_only), \
-                patch.object(history.os, "mkdir", side_effect=AssertionError("reader mkdir")), \
-                patch.object(history, "_sync", side_effect=AssertionError("reader fsync")):
+        with (
+            patch.object(history.os, "open", side_effect=read_only),
+            patch.object(history.os, "mkdir", side_effect=AssertionError("reader mkdir")),
+            patch.object(history, "_sync", side_effect=AssertionError("reader fsync")),
+        ):
             report = history.verify_history(self.root, self.relative)
             rendered = history.render_history(self.root, self.relative)
         self.assertEqual(report["event_count"], 1)
@@ -328,9 +413,12 @@ class HistoryTests(unittest.TestCase):
         self.assertFalse(self.lock_path.exists())
 
     def test_trifecta_entry_template_is_adapted_with_escaped_text_and_complete_payload(self) -> None:
-        payload = {"summary": "Cambio <script>\n# falso título **negrita**",
-                   "files": ["README.md", "[enlace](https://example.invalid)"],
-                   "commands": ["echo `texto`"], "additional": {"value": 42}}
+        payload = {
+            "summary": "Cambio <script>\n# falso título **negrita**",
+            "files": ["README.md", "[enlace](https://example.invalid)"],
+            "commands": ["echo `texto`"],
+            "additional": {"value": 42},
+        }
         event = self.append(payload=payload)
         prefix = self.path.read_bytes()
         rendered = history.render_history(self.root, self.relative)
@@ -367,8 +455,7 @@ class HistoryTests(unittest.TestCase):
         self.assertEqual(history.verify_history(self.root, self.relative, self.session)["event_count"], 1)
         # Aislar el nombre inválido del error de duplicación anterior: el orden
         # lexicográfico de los UUID no debe decidir qué excepción se observa.
-        other_path.write_bytes(self.encode({**first, "session_id": another,
-                                           "event_id": str(uuid4())}))
+        other_path.write_bytes(self.encode({**first, "session_id": another, "event_id": str(uuid4())}))
         self.assertEqual(history.verify_history(self.root, self.relative)["event_count"], 2)
         (self.directory / "bad-name.jsonl").write_bytes(b"")
         with self.assertRaisesRegex(ValueError, "UUID"):
@@ -380,9 +467,11 @@ class HistoryTests(unittest.TestCase):
         outside.write_bytes(original)
         self.directory.mkdir(parents=True)
         self.path.symlink_to(outside)
-        for operation in (lambda: self.append(),
-                          lambda: history.verify_history(self.root, self.relative),
-                          lambda: history.render_history(self.root, self.relative)):
+        for operation in (
+            lambda: self.append(),
+            lambda: history.verify_history(self.root, self.relative),
+            lambda: history.render_history(self.root, self.relative),
+        ):
             with self.assertRaisesRegex(ValueError, "simbólico"):
                 operation()
         self.assertEqual(outside.read_bytes(), original)
@@ -421,8 +510,10 @@ class HistoryTests(unittest.TestCase):
         prefix = self.path.read_bytes()
         alias = self.base / "alias.jsonl"
         os.link(self.path, alias)
-        for operation in (lambda: self.append("later"),
-                          lambda: history.verify_history(self.root, self.relative)):
+        for operation in (
+            lambda: self.append("later"),
+            lambda: history.verify_history(self.root, self.relative),
+        ):
             with self.assertRaisesRegex(ValueError, "duros"):
                 operation()
         self.assertEqual(alias.read_bytes(), prefix)
@@ -453,8 +544,13 @@ class HistoryTests(unittest.TestCase):
         context = multiprocessing.get_context("spawn")
         start = context.Event()
         results = context.Queue()
-        processes = [context.Process(target=_writer, args=(str(self.root), self.session,
-                     f"writer-{index}", count, start, results, same_key)) for index in range(workers)]
+        processes = [
+            context.Process(
+                target=_writer,
+                args=(str(self.root), self.session, f"writer-{index}", count, start, results, same_key),
+            )
+            for index in range(workers)
+        ]
         try:
             for process in processes:
                 process.start()
@@ -489,8 +585,9 @@ class HistoryTests(unittest.TestCase):
         self.assertEqual(len({event["event_id"] for event in events}), len(events))
         expected = {f"writer-{worker}-{number}" for worker in range(workers) for number in range(count)}
         self.assertEqual({event["idempotency_key"] for event in events[1:]}, expected)
-        self.assertEqual({event["event_id"] for event in acknowledgements},
-                         {event["event_id"] for event in events[1:]})
+        self.assertEqual(
+            {event["event_id"] for event in acknowledgements}, {event["event_id"] for event in events[1:]}
+        )
 
     def test_multiprocess_same_key_is_written_exactly_once(self) -> None:
         acknowledgements = self._processes(workers=5, count=1, same_key=True)

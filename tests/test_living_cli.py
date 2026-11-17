@@ -5,12 +5,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 KIT = Path(__file__).resolve().parents[1]
 CLI = KIT / "agent_docs_kit.py"
@@ -31,14 +31,25 @@ class LivingCliTests(unittest.TestCase):
         env = dict(os.environ)
         env.pop("PYTHONDONTWRITEBYTECODE", None)
         return subprocess.run(
-            [sys.executable, str(cli), *args], text=True, capture_output=True,
-            check=False, timeout=15, env=env,
+            [sys.executable, str(cli), *args],
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=15,
+            env=env,
         )
 
     def capture(self) -> subprocess.CompletedProcess[str]:
         result = self.run_cli(
-            "snapshot", str(self.root), "--source", "src", "--document", "README.md",
-            "--output", str(self.reference), "--apply",
+            "snapshot",
+            str(self.root),
+            "--source",
+            "src",
+            "--document",
+            "README.md",
+            "--output",
+            str(self.reference),
+            "--apply",
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         return result
@@ -56,8 +67,14 @@ class LivingCliTests(unittest.TestCase):
 
     def test_snapshot_requires_apply_and_does_not_write_on_usage_error(self) -> None:
         result = self.run_cli(
-            "snapshot", str(self.root), "--source", "src", "--document", "README.md",
-            "--output", str(self.reference),
+            "snapshot",
+            str(self.root),
+            "--source",
+            "src",
+            "--document",
+            "README.md",
+            "--output",
+            str(self.reference),
         )
         self.assertEqual(result.returncode, 2)
         self.assertFalse(self.reference.exists())
@@ -83,8 +100,15 @@ class LivingCliTests(unittest.TestCase):
         self.capture()
         before = self.reference.read_bytes()
         result = self.run_cli(
-            "snapshot", str(self.root), "--source", "src", "--document", "README.md",
-            "--output", str(self.reference), "--apply",
+            "snapshot",
+            str(self.root),
+            "--source",
+            "src",
+            "--document",
+            "README.md",
+            "--output",
+            str(self.reference),
+            "--apply",
         )
         self.assertEqual(result.returncode, 1)
         self.assertEqual(before, self.reference.read_bytes())
@@ -135,21 +159,36 @@ class LivingCliTests(unittest.TestCase):
         shutil.copytree(KIT, copied, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
         copied_cli = copied / "agent_docs_kit.py"
         result = self.run_cli(
-            "snapshot", str(copied), "--source", ".", "--document", "README.md",
-            "--output", str(self.reference), "--apply", cli=copied_cli,
+            "snapshot",
+            str(copied),
+            "--source",
+            ".",
+            "--document",
+            "README.md",
+            "--output",
+            str(self.reference),
+            "--apply",
+            cli=copied_cli,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse((copied / "__pycache__").exists())
 
         def complete_inventory() -> dict[str, str]:
             return {
-                p.relative_to(copied).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else "directory"
+                p.relative_to(copied).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+                if p.is_file()
+                else "directory"
                 for p in copied.rglob("*")
             }
 
         before = complete_inventory()
         result = self.run_cli(
-            "status", str(copied), "--snapshot", str(self.reference), "--json", cli=copied_cli,
+            "status",
+            str(copied),
+            "--snapshot",
+            str(self.reference),
+            "--json",
+            cli=copied_cli,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(json.loads(result.stdout)["state"], "unchanged_since_snapshot")

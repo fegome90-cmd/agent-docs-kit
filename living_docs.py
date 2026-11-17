@@ -6,16 +6,16 @@ Snapshots are local, unsigned observations, not an atomic view of a live tree.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from datetime import datetime, timezone
 import hashlib
 import json
 import os
-from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import shutil
 import stat
 import subprocess
+from collections.abc import Sequence
+from datetime import UTC, datetime
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 VERSION = "0.5.0-rc.1"
@@ -101,12 +101,12 @@ def _kind(path: Path, *, missing_ok: bool = False) -> str:
 
 
 def _signature(info: os.stat_result) -> tuple[int, ...]:
-    return (info.st_dev, info.st_ino, info.st_mode, info.st_size,
-            info.st_mtime_ns, info.st_ctime_ns)
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
 
 
-def _fingerprint(path: Path, relative: str, *, chunks: list[bytes] | None = None,
-                 maximum_bytes: int | None = None) -> dict[str, Any]:
+def _fingerprint(
+    path: Path, relative: str, *, chunks: list[bytes] | None = None, maximum_bytes: int | None = None
+) -> dict[str, Any]:
     """Read only regular files in bounded chunks; propagate incomplete reads."""
     checked = _safe_path(path)
     before = checked.lstat()
@@ -129,14 +129,18 @@ def _fingerprint(path: Path, relative: str, *, chunks: list[bytes] | None = None
                 chunks.append(chunk)
         after = os.fstat(stream.fileno())
     current = _safe_path(checked).lstat()
-    if (size != opened.st_size or _signature(opened) != _signature(after)
-            or _signature(after) != _signature(current)):
+    if (
+        size != opened.st_size
+        or _signature(opened) != _signature(after)
+        or _signature(after) != _signature(current)
+    ):
         raise OSError(f"El archivo cambió durante la lectura: {checked}")
     return {"path": relative, "size": size, "sha256": digest.hexdigest()}
 
 
-def _scan_directory(path: Path, relative: str, files: dict[str, dict[str, Any]],
-                    directories: set[str]) -> None:
+def _scan_directory(
+    path: Path, relative: str, files: dict[str, dict[str, Any]], directories: set[str]
+) -> None:
     if relative in directories:
         return
     checked = _safe_path(path)
@@ -161,8 +165,9 @@ def _scan_directory(path: Path, relative: str, files: dict[str, dict[str, Any]],
         raise OSError(f"El directorio cambió durante el recorrido: {checked}")
 
 
-def _collect_sources(root: Path, scopes: list[dict[str, Any]], *, missing_ok: bool = False
-                     ) -> tuple[dict[str, dict[str, Any]], set[str], dict[str, str]]:
+def _collect_sources(
+    root: Path, scopes: list[dict[str, Any]], *, missing_ok: bool = False
+) -> tuple[dict[str, dict[str, Any]], set[str], dict[str, str]]:
     files: dict[str, dict[str, Any]] = {}
     directories: set[str] = set()
     kinds: dict[str, str] = {}
@@ -180,8 +185,9 @@ def _collect_sources(root: Path, scopes: list[dict[str, Any]], *, missing_ok: bo
     return files, directories, kinds
 
 
-def _collect_documents(root: Path, paths: list[str], source_files: dict[str, dict[str, Any]],
-                       *, missing_ok: bool = False) -> dict[str, dict[str, Any]]:
+def _collect_documents(
+    root: Path, paths: list[str], source_files: dict[str, dict[str, Any]], *, missing_ok: bool = False
+) -> dict[str, dict[str, Any]]:
     documents: dict[str, dict[str, Any]] = {}
     for relative in paths:
         target = root / relative
@@ -190,8 +196,9 @@ def _collect_documents(root: Path, paths: list[str], source_files: dict[str, dic
             continue
         if kind != "file":
             raise ValueError(f"El documento debe ser un archivo regular: {relative}")
-        documents[relative] = (source_files[relative] if relative in source_files
-                               else _fingerprint(target, relative))
+        documents[relative] = (
+            source_files[relative] if relative in source_files else _fingerprint(target, relative)
+        )
     return documents
 
 
@@ -225,16 +232,36 @@ def _git_head(root: Path) -> str | None:
         executable_path = Path(executable).resolve(strict=True)
         if executable_path.is_relative_to(root):
             return None
-        environment = {key: value for key, value in os.environ.items()
-                       if not key.startswith("GIT_")}
-        environment.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
-                           GIT_OPTIONAL_LOCKS="0", GIT_TERMINAL_PROMPT="0")
+        environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
+        environment.update(
+            GIT_CONFIG_NOSYSTEM="1",
+            GIT_CONFIG_GLOBAL=os.devnull,
+            GIT_OPTIONAL_LOCKS="0",
+            GIT_TERMINAL_PROMPT="0",
+        )
         result = subprocess.run(
-            [str(executable_path), "--no-pager", "--no-optional-locks",
-             "-c", "core.fsmonitor=false", "-c", f"core.hooksPath={os.devnull}",
-             "-C", str(root), "rev-parse", "--verify", "HEAD"],
-            stdin=subprocess.DEVNULL, capture_output=True, text=True,
-            encoding="ascii", errors="strict", check=False, timeout=3.0, env=environment,
+            [
+                str(executable_path),
+                "--no-pager",
+                "--no-optional-locks",
+                "-c",
+                "core.fsmonitor=false",
+                "-c",
+                f"core.hooksPath={os.devnull}",
+                "-C",
+                str(root),
+                "rev-parse",
+                "--verify",
+                "HEAD",
+            ],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            encoding="ascii",
+            errors="strict",
+            check=False,
+            timeout=3.0,
+            env=environment,
         )
     except (OSError, subprocess.TimeoutExpired, UnicodeError):
         return None
@@ -281,19 +308,27 @@ def _write_exclusive(output: Path, payload: dict[str, Any]) -> None:
         raise
 
 
-def snapshot(root: Path, sources: Sequence[str], documents: Sequence[str], output: Path,
-             *, discover_roots: Sequence[str] | None = None) -> dict[str, Any]:
+def snapshot(
+    root: Path,
+    sources: Sequence[str],
+    documents: Sequence[str],
+    output: Path,
+    *,
+    discover_roots: Sequence[str] | None = None,
+) -> dict[str, Any]:
     """Create a new, exclusive snapshot; callers control write authorization."""
     directory = _root(root)
     policy = None
     if discover_roots is not None:
         from discovery import make_policy
+
         policy = make_policy(directory, discover_roots)
     source_paths = _selected(sources)
     document_paths = _selected(documents, documents=True)
     destination = _safe_path(output)
     if policy is not None:
         from discovery import outside_discovery
+
         outside_discovery(destination, directory, policy)
     scopes = [{"path": path, "kind": _kind(directory / path)} for path in source_paths]
     _outside_observed(destination, directory, scopes, document_paths)
@@ -302,20 +337,26 @@ def snapshot(root: Path, sources: Sequence[str], documents: Sequence[str], outpu
     inventory_before = None
     if policy is not None:
         from discovery import worktree_inventory
+
         inventory_before = worktree_inventory(directory, policy)
     files, directories, kinds = _collect_sources(directory, scopes)
     if any(kinds[scope["path"]] != scope["kind"] for scope in scopes):
         raise OSError("Un alcance cambió de tipo durante la captura.")
     docs = _collect_documents(directory, document_paths, files)
     payload = {
-        "schema": SCHEMA, "schema_version": SCHEMA_VERSION, "kit_version": VERSION,
-        "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-        "hash_algorithm": "sha256", "semantic_review": "not_attested",
-        "exclusions": list(EXCLUSIONS), "source_scopes": scopes,
+        "schema": SCHEMA,
+        "schema_version": SCHEMA_VERSION,
+        "kit_version": VERSION,
+        "created_at": datetime.now(UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
+        "hash_algorithm": "sha256",
+        "semantic_review": "not_attested",
+        "exclusions": list(EXCLUSIONS),
+        "source_scopes": scopes,
         "source_directories": sorted(directories),
         "sources": [files[path] for path in sorted(files)],
         "documents": [docs[path] for path in sorted(docs)],
-        "git_head": _git_head(directory), "coverage": COVERAGE,
+        "git_head": _git_head(directory),
+        "coverage": COVERAGE,
     }
     if policy is not None:
         payload["schema_version"] = 2
@@ -343,8 +384,12 @@ def _records(value: object, label: str, *, required: bool = False) -> dict[str, 
     for item in value:
         entry = _object(item, {"path", "size", "sha256"}, label)
         relative = _relative(entry["path"], canonical=True, allow_root=False)
-        if (type(entry["size"]) is not int or entry["size"] < 0
-                or not isinstance(entry["sha256"], str) or not _HASH.fullmatch(entry["sha256"])):
+        if (
+            type(entry["size"]) is not int
+            or entry["size"] < 0
+            or not isinstance(entry["sha256"], str)
+            or not _HASH.fullmatch(entry["sha256"])
+        ):
             raise ValueError(f"Tamaño o SHA-256 inválido en {label}: {relative}")
         if relative in records:
             raise ValueError(f"Ruta duplicada en {label}: {relative}")
@@ -361,21 +406,41 @@ def _validate_manifest(value: object) -> dict[str, Any]:
         raise ValueError("Versión de esquema inválida.")
     schema_version = value["schema_version"]
     extra = {"discovery"} if schema_version == 2 else set()
-    payload = _object(value, {
-        "schema", "schema_version", "kit_version", "created_at", "hash_algorithm",
-        "semantic_review", "exclusions", "source_scopes", "source_directories",
-        "sources", "documents", "git_head", "coverage",
-    } | extra, "snapshot")
-    if (payload["schema"] != SCHEMA or type(payload["schema_version"]) is not int
-            or payload["schema_version"] not in (1, 2)
-            or not isinstance(payload["kit_version"], str)
-            or not _KIT_VERSION.fullmatch(payload["kit_version"])
-            or payload["hash_algorithm"] != "sha256"
-            or payload["semantic_review"] != "not_attested"
-            or payload["exclusions"] != list(EXCLUSIONS) or payload["coverage"] != COVERAGE):
+    payload = _object(
+        value,
+        {
+            "schema",
+            "schema_version",
+            "kit_version",
+            "created_at",
+            "hash_algorithm",
+            "semantic_review",
+            "exclusions",
+            "source_scopes",
+            "source_directories",
+            "sources",
+            "documents",
+            "git_head",
+            "coverage",
+        }
+        | extra,
+        "snapshot",
+    )
+    if (
+        payload["schema"] != SCHEMA
+        or type(payload["schema_version"]) is not int
+        or payload["schema_version"] not in (1, 2)
+        or not isinstance(payload["kit_version"], str)
+        or not _KIT_VERSION.fullmatch(payload["kit_version"])
+        or payload["hash_algorithm"] != "sha256"
+        or payload["semantic_review"] != "not_attested"
+        or payload["exclusions"] != list(EXCLUSIONS)
+        or payload["coverage"] != COVERAGE
+    ):
         raise ValueError("Versión, política o declaración del snapshot desconocida.")
     if schema_version == 2:
         from discovery import validate_policy
+
         validate_policy(payload["discovery"])
     created_at = payload["created_at"]
     try:
@@ -388,7 +453,8 @@ def _validate_manifest(value: object) -> dict[str, Any]:
     except (ValueError, OverflowError) as exc:
         raise ValueError("Fecha UTC inválida en el snapshot.") from exc
     if payload["git_head"] is not None and (
-            not isinstance(payload["git_head"], str) or not _HEAD.fullmatch(payload["git_head"])):
+        not isinstance(payload["git_head"], str) or not _HEAD.fullmatch(payload["git_head"])
+    ):
         raise ValueError("Git HEAD inválido en el snapshot.")
     scope_list = payload["source_scopes"]
     if not isinstance(scope_list, list) or not scope_list:
@@ -432,8 +498,7 @@ def _validate_manifest(value: object) -> dict[str, Any]:
             raise ValueError("Un archivo del snapshot no puede ser padre de otra ruta.")
         if path in files or path in directories:
             for parent in parents:
-                if (any(_within(parent, scope) for scope in directory_scopes)
-                        and parent not in directories):
+                if any(_within(parent, scope) for scope in directory_scopes) and parent not in directories:
                     raise ValueError(f"Falta un directorio intermedio observado: {parent}")
     for path in files.keys() & docs.keys():
         if files[path] != docs[path]:
@@ -458,8 +523,11 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     chunks: list[bytes] = []
     _fingerprint(path, "snapshot", chunks=chunks)
     try:
-        payload = json.loads(b"".join(chunks).decode("utf-8"),
-                             object_pairs_hook=_unique_object, parse_constant=_invalid_constant)
+        payload = json.loads(
+            b"".join(chunks).decode("utf-8"),
+            object_pairs_hook=_unique_object,
+            parse_constant=_invalid_constant,
+        )
     except RecursionError as exc:
         raise ValueError("Snapshot JSON demasiado anidado.") from exc
     return _validate_manifest(payload)
@@ -468,8 +536,7 @@ def _load_manifest(path: Path) -> dict[str, Any]:
 def _diff(before: dict[str, dict[str, Any]], after: dict[str, dict[str, Any]]) -> dict[str, list[str]]:
     return {
         "added": sorted(after.keys() - before.keys()),
-        "modified": sorted(path for path in before.keys() & after.keys()
-                           if before[path] != after[path]),
+        "modified": sorted(path for path in before.keys() & after.keys() if before[path] != after[path]),
         "deleted": sorted(before.keys() - after.keys()),
     }
 
@@ -481,19 +548,21 @@ def status(root: Path, snapshot_path: Path, *, knowledge_map: str | None = None)
     knowledge = None
     if knowledge_map is not None:
         if not baseline_path.is_relative_to(directory):
-            raise ValueError('unsupported_external_snapshot')
+            raise ValueError("unsupported_external_snapshot")
         from doc_evidence import open_view
-        reader = open_view(directory, 'worktree')
+
+        reader = open_view(directory, "worktree")
         relative_snapshot = baseline_path.relative_to(directory).as_posix()
         reader.fingerprint(relative_snapshot)
     baseline = _load_manifest(baseline_path)
     if knowledge_map is not None:
-        for item in baseline['sources'] + baseline['documents']:
-            reader.fingerprint(item['path'])
+        for item in baseline["sources"] + baseline["documents"]:
+            reader.fingerprint(item["path"])
     policy = baseline.get("discovery")
     inventory_before = None
     if policy is not None:
         from discovery import outside_discovery, worktree_inventory
+
         outside_discovery(baseline_path, directory, policy)
         inventory_before = worktree_inventory(directory, policy)
     scopes = baseline["source_scopes"]
@@ -502,7 +571,8 @@ def status(root: Path, snapshot_path: Path, *, knowledge_map: str | None = None)
     baseline_identity = _identity(baseline_path)
     files, directories, kinds = _collect_sources(directory, scopes, missing_ok=True)
     if baseline_identity is not None and any(
-            _identity(directory / path) == baseline_identity for path in files):
+        _identity(directory / path) == baseline_identity for path in files
+    ):
         raise ValueError("Una fuente observada es un alias del archivo snapshot.")
     documents = _collect_documents(directory, document_paths, files, missing_ok=True)
     source_changes = _diff({item["path"]: item for item in baseline["sources"]}, files)
@@ -513,33 +583,46 @@ def status(root: Path, snapshot_path: Path, *, knowledge_map: str | None = None)
         if scope["kind"] != kinds[scope["path"]]
     ]
     old_directories = set(baseline["source_directories"])
-    directory_changes = {"added": sorted(directories - old_directories),
-                         "deleted": sorted(old_directories - directories)}
+    directory_changes = {
+        "added": sorted(directories - old_directories),
+        "deleted": sorted(old_directories - directories),
+    }
     coverage_report = None
     if policy is not None:
         from discovery import report as discovery_report
+
         inventory_after = worktree_inventory(directory, policy)
         if inventory_before != inventory_after:
             raise OSError("El inventario Git cambió durante la comprobación; reintenta.")
-        covered = (set(files) | set(documents)
-                   | {x["path"] for x in baseline["sources"] + baseline["documents"]})
+        covered = (
+            set(files) | set(documents) | {x["path"] for x in baseline["sources"] + baseline["documents"]}
+        )
         coverage_report = discovery_report(policy, "worktree", inventory_after[2], covered)
-    changed = bool((coverage_report and coverage_report["state"] == "uncovered")
-                   or scope_changes or any(source_changes.values())
-                   or any(document_changes.values()) or any(directory_changes.values()))
+    changed = bool(
+        (coverage_report and coverage_report["state"] == "uncovered")
+        or scope_changes
+        or any(source_changes.values())
+        or any(document_changes.values())
+        or any(directory_changes.values())
+    )
     if knowledge_map is not None:
         from doc_impact import check_knowledge
+
         knowledge = check_knowledge(directory, knowledge_map, relative_snapshot, read_view=reader)
         reader.assert_unchanged()
-        changed = changed or knowledge['state'] != 'no_linked_change'
+        changed = changed or knowledge["state"] != "no_linked_change"
     return {
         "state": "review_required" if changed else "unchanged_since_snapshot",
         **({"knowledge": knowledge} if knowledge is not None else {}),
-        "kit_version": VERSION, "snapshot_created_at": baseline["created_at"],
-        "semantic_review": "not_attested", "sources": source_changes,
-        "documents": document_changes, "scope_changes": scope_changes,
+        "kit_version": VERSION,
+        "snapshot_created_at": baseline["created_at"],
+        "semantic_review": "not_attested",
+        "sources": source_changes,
+        "documents": document_changes,
+        "scope_changes": scope_changes,
         "directory_changes": directory_changes,
         "git": {"snapshot_head": baseline["git_head"], "current_head": _git_head(directory)},
-        "coverage": COVERAGE, "coverage_note": COVERAGE_NOTE,
+        "coverage": COVERAGE,
+        "coverage_note": COVERAGE_NOTE,
         **({"coverage_check": coverage_report} if coverage_report is not None else {}),
     }

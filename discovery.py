@@ -1,4 +1,5 @@
 """Git-backed coverage discovery; never infers documentation correctness."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -26,6 +27,7 @@ def make_policy(root: Path, values: Sequence[str]) -> dict[str, Any]:
     validate_roots(root, policy)
     # Reuse the read-only Git runner; no second subprocess implementation.
     from git_gate import _Git
+
     _Git(root)
     return policy
 
@@ -44,13 +46,13 @@ def validate_roots(root: Path, policy: dict[str, Any]) -> None:
 
 
 def outside_discovery(output: Path, root: Path, policy: dict[str, Any]) -> None:
-    living._outside_observed(output, root,
-        [{"path": p, "kind": "directory"} for p in policy["roots"]], [])
+    living._outside_observed(output, root, [{"path": p, "kind": "directory"} for p in policy["roots"]], [])
 
 
 def eligible(path: str, policy: dict[str, Any]) -> bool:
-    return (not any(part in living.EXCLUSIONS for part in Path(path).parts)
-            and any(living._within(path, scope) for scope in policy["roots"]))
+    return not any(part in living.EXCLUSIONS for part in Path(path).parts) and any(
+        living._within(path, scope) for scope in policy["roots"]
+    )
 
 
 def worktree_inventory(root: Path, policy: dict[str, Any]) -> tuple[bytes, str | None, dict[str, str]]:
@@ -59,7 +61,8 @@ def worktree_inventory(root: Path, policy: dict[str, Any]) -> tuple[bytes, str |
     The caller takes an inventory before and after fingerprinting selected files.
     This detects many races, not a coherent or adversary-proof filesystem snapshot.
     """
-    from git_gate import _Git, _read_index, _decode, _index_path
+    from git_gate import _decode, _Git, _index_path, _read_index
+
     validate_roots(root, policy)
     git = _Git(root)
     index, entries = _read_index(git)
@@ -83,15 +86,19 @@ def worktree_inventory(root: Path, policy: dict[str, Any]) -> tuple[bytes, str |
     return index, head, candidates
 
 
-def report(policy: dict[str, Any], view: str, candidates: dict[str, str],
-           covered: set[str]) -> dict[str, Any]:
-    uncovered = [{"path": path, "git": candidates[path]}
-                 for path in sorted(candidates.keys() - covered)]
-    return {"mode": "git", "view": view, "roots": policy["roots"],
-            "state": "uncovered" if uncovered else "complete",
-            "eligible_count": len(candidates),
-            "covered_count": len(candidates.keys() & covered),
-            "uncovered": uncovered,
-            "note": "Cobertura de rutas en roots declarados, no aprobación semántica. "
-                    "Worktree: tracked y untracked no ignorados; índice: sólo entradas preparadas. "
-                    "Se conservan las exclusiones fijas del kit."}
+def report(
+    policy: dict[str, Any], view: str, candidates: dict[str, str], covered: set[str]
+) -> dict[str, Any]:
+    uncovered = [{"path": path, "git": candidates[path]} for path in sorted(candidates.keys() - covered)]
+    return {
+        "mode": "git",
+        "view": view,
+        "roots": policy["roots"],
+        "state": "uncovered" if uncovered else "complete",
+        "eligible_count": len(candidates),
+        "covered_count": len(candidates.keys() & covered),
+        "uncovered": uncovered,
+        "note": "Cobertura de rutas en roots declarados, no aprobación semántica. "
+        "Worktree: tracked y untracked no ignorados; índice: sólo entradas preparadas. "
+        "Se conservan las exclusiones fijas del kit.",
+    }

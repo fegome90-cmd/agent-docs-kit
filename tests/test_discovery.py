@@ -1,15 +1,16 @@
 """Discovery contract through real CLI processes and isolated Git repositories."""
+
 from __future__ import annotations
 
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 KIT = Path(__file__).resolve().parents[1]
 CLI = KIT / "agent_docs_kit.py"
@@ -26,12 +27,25 @@ class DiscoveryTests(unittest.TestCase):
         self.write("README.md", "# Example\n")
         self.write(".gitignore", "src/ignored*\n")
         self.env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
-        self.env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull,
-                        GIT_OPTIONAL_LOCKS="0", PYTHONDONTWRITEBYTECODE="1")
+        self.env.update(
+            GIT_CONFIG_NOSYSTEM="1",
+            GIT_CONFIG_GLOBAL=os.devnull,
+            GIT_OPTIONAL_LOCKS="0",
+            PYTHONDONTWRITEBYTECODE="1",
+        )
         self.git("init", "-q")
         self.git("add", "--", "src/base.py", "README.md", ".gitignore")
-        self.git("-c", "user.name=Test", "-c", "user.email=test@example.invalid",
-                 "-c", "core.hooksPath=" + os.devnull, "commit", "-qm", "baseline")
+        self.git(
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.invalid",
+            "-c",
+            "core.hooksPath=" + os.devnull,
+            "commit",
+            "-qm",
+            "baseline",
+        )
         self.ref = self.root / "evidence.json"
 
     def write(self, name, data):
@@ -41,32 +55,50 @@ class DiscoveryTests(unittest.TestCase):
         return p
 
     def git(self, *args, env=None):
-        p = subprocess.run(["git", "-c", "core.fsmonitor=false", "-C", str(self.root), *args],
-                           env=env or self.env, capture_output=True, timeout=15)
+        p = subprocess.run(
+            ["git", "-c", "core.fsmonitor=false", "-C", str(self.root), *args],
+            env=env or self.env,
+            capture_output=True,
+            timeout=15,
+        )
         self.assertEqual(p.returncode, 0, p.stderr.decode(errors="replace"))
         return p.stdout
 
     def cli(self, *args, expected=0, env=None):
-        p = subprocess.run([sys.executable, "-B", str(CLI), *map(str, args)],
-                           env=env or self.env, cwd=self.root, capture_output=True,
-                           text=True, timeout=30)
+        p = subprocess.run(
+            [sys.executable, "-B", str(CLI), *map(str, args)],
+            env=env or self.env,
+            cwd=self.root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
         self.assertEqual(p.returncode, expected, p.stdout + p.stderr)
         return json.loads(p.stdout) if p.stdout.strip().startswith("{") else p.stdout
 
     def capture(self, source="src/base.py", roots=("src",), ref=None, expected=0):
-        args = ["snapshot", self.root, "--source", source, "--document", "README.md",
-                "--output", ref or self.ref, "--apply"]
+        args = [
+            "snapshot",
+            self.root,
+            "--source",
+            source,
+            "--document",
+            "README.md",
+            "--output",
+            ref or self.ref,
+            "--apply",
+        ]
         for root in roots:
             args += ["--discover-root", root]
         return self.cli(*args, expected=expected)
 
     def status(self, expected=0, env=None):
-        return self.cli("status", self.root, "--snapshot", self.ref, "--json",
-                        expected=expected, env=env)
+        return self.cli("status", self.root, "--snapshot", self.ref, "--json", expected=expected, env=env)
 
     def gate(self, expected=0, env=None):
-        return self.cli("index-check", self.root, "--snapshot", "evidence.json", "--json",
-                        expected=expected, env=env)
+        return self.cli(
+            "index-check", self.root, "--snapshot", "evidence.json", "--json", expected=expected, env=env
+        )
 
     def test_v2_policy_is_persisted_and_consumed_without_status_flag(self):
         s = self.capture()
@@ -106,15 +138,15 @@ class DiscoveryTests(unittest.TestCase):
         self.capture()
         self.write("src/ignored.py", "X = 2\n")
         self.git("add", "-f", "--", "src/ignored.py")
-        self.assertEqual(self.status(1)["coverage_check"]["uncovered"],
-                         [{"path": "src/ignored.py", "git": "tracked"}])
+        self.assertEqual(
+            self.status(1)["coverage_check"]["uncovered"], [{"path": "src/ignored.py", "git": "tracked"}]
+        )
 
     def test_new_binary_is_reported_as_path_not_contents(self):
         self.capture()
         self.write("src/asset.bin", b"\xff\xfe\x00payload")
         r = self.status(1)
-        self.assertEqual(r["coverage_check"]["uncovered"],
-                         [{"path": "src/asset.bin", "git": "untracked"}])
+        self.assertEqual(r["coverage_check"]["uncovered"], [{"path": "src/asset.bin", "git": "untracked"}])
         self.assertNotIn("payload", json.dumps(r))
 
     def test_nested_roots_and_outside_files(self):
@@ -150,8 +182,19 @@ class DiscoveryTests(unittest.TestCase):
 
     def test_document_inside_root_counts_as_covered(self):
         self.write("src/doc.md", "# Doc\n")
-        self.cli("snapshot", self.root, "--source", "src/base.py", "--document", "src/doc.md",
-                 "--discover-root", "src", "--output", self.ref, "--apply")
+        self.cli(
+            "snapshot",
+            self.root,
+            "--source",
+            "src/base.py",
+            "--document",
+            "src/doc.md",
+            "--discover-root",
+            "src",
+            "--output",
+            self.ref,
+            "--apply",
+        )
         self.status()
 
     def test_v1_contract_has_no_discovery_field(self):
@@ -178,8 +221,14 @@ class DiscoveryTests(unittest.TestCase):
 
     def test_invalid_discovery_roots_create_nothing(self):
         (self.root / "src/nested").mkdir()
-        for roots in [("../src",), ("/tmp",), ("missing",), ("src/base.py",),
-                      ("src", "./src"), ("src", "src/nested")]:
+        for roots in [
+            ("../src",),
+            ("/tmp",),
+            ("missing",),
+            ("src/base.py",),
+            ("src", "./src"),
+            ("src", "src/nested"),
+        ]:
             with self.subTest(roots=roots):
                 self.capture(roots=roots, expected=3)
                 self.assertFalse(self.ref.exists())
@@ -210,10 +259,14 @@ class DiscoveryTests(unittest.TestCase):
 
     def test_v2_invalid_schema_cannot_return_clean(self):
         original = self.capture()
-        invalid = [{"mode": "bad", "roots": ["src"]}, {"mode": "git", "roots": []},
-                   {"mode": "git", "roots": ["src", "src"]},
-                   {"mode": "git", "roots": ["src"], "extra": 1},
-                   {"mode": "git", "roots": "src"}, {"mode": "git", "roots": ["../src"]}]
+        invalid = [
+            {"mode": "bad", "roots": ["src"]},
+            {"mode": "git", "roots": []},
+            {"mode": "git", "roots": ["src", "src"]},
+            {"mode": "git", "roots": ["src"], "extra": 1},
+            {"mode": "git", "roots": "src"},
+            {"mode": "git", "roots": ["../src"]},
+        ]
         for policy in invalid:
             with self.subTest(policy=policy):
                 payload = {**original, "discovery": policy}
@@ -282,9 +335,14 @@ class DiscoveryTests(unittest.TestCase):
     def test_status_is_read_only_including_index(self):
         self.capture()
         self.write("src/new.md", "new\n")
+
         def inventory():
-            return {str(p.relative_to(self.root)): hashlib.sha256(p.read_bytes()).hexdigest()
-                    for p in self.root.rglob("*") if p.is_file()}
+            return {
+                str(p.relative_to(self.root)): hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in self.root.rglob("*")
+                if p.is_file()
+            }
+
         before = inventory()
         self.status(1)
         self.assertEqual(inventory(), before)
@@ -303,14 +361,18 @@ class DiscoveryTests(unittest.TestCase):
     def test_discovery_never_fingerprints_uncovered_contents(self):
         sys.path.insert(0, str(KIT))
         from unittest.mock import patch
+
         import living_docs
+
         self.capture()
         self.write("src/new.bin", b"\x00\xffsecret-body")
         calls = []
         original = living_docs._fingerprint
+
         def observed(path, relative, **kwargs):
             calls.append(str(path))
             return original(path, relative, **kwargs)
+
         with patch.object(living_docs, "_fingerprint", side_effect=observed):
             r = living_docs.status(self.root, self.ref)
         self.assertEqual(r["coverage_check"]["state"], "uncovered")
@@ -319,21 +381,26 @@ class DiscoveryTests(unittest.TestCase):
     def test_inventory_race_fails_without_publishing_snapshot(self):
         sys.path.insert(0, str(KIT))
         from unittest.mock import patch
+
         import discovery
         import living_docs
+
         before = (b"index", "head", {"src/base.py": "tracked"})
         after = (b"index", "head", {"src/base.py": "tracked", "src/new.md": "untracked"})
         with patch.object(discovery, "worktree_inventory", side_effect=[before, after]):
             with self.assertRaisesRegex(OSError, "inventario Git"):
-                living_docs.snapshot(self.root, ["src/base.py"], ["README.md"], self.ref,
-                                     discover_roots=["src"])
+                living_docs.snapshot(
+                    self.root, ["src/base.py"], ["README.md"], self.ref, discover_roots=["src"]
+                )
         self.assertFalse(self.ref.exists())
 
     def test_inventory_race_during_status_fails(self):
         sys.path.insert(0, str(KIT))
         from unittest.mock import patch
+
         import discovery
         import living_docs
+
         self.capture()
         before = (b"index", "head", {"src/base.py": "tracked"})
         after = (b"index", "head", {"src/base.py": "tracked", "src/new.md": "untracked"})
@@ -354,14 +421,18 @@ class DiscoveryTests(unittest.TestCase):
             self.skipTest("mkfifo unavailable")
         sys.path.insert(0, str(KIT))
         from unittest.mock import patch
-        import git_gate
+
         import discovery
+        import git_gate
+
         os.mkfifo(self.root / "src/pipe")
         original = git_gate._Git.run
+
         def reported(git, *args, **kwargs):
             if args[:2] == ("ls-files", "--others"):
                 return b"src/pipe\x00"
             return original(git, *args, **kwargs)
+
         with patch.object(git_gate._Git, "run", reported):
             with self.assertRaisesRegex(ValueError, "no regular"):
                 discovery.worktree_inventory(self.root, {"mode": "git", "roots": ["src"]})

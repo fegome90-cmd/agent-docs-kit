@@ -12,7 +12,12 @@ license = { text = "MIT" }
 dependencies = ["portalocker==4.4.2"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "pyrefly>=0.30",
+]
 
 [project.scripts]
 agent-docs-kit = "agent_docs_kit:main"
@@ -31,6 +36,25 @@ src = ["."]
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402", "SIM117"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+show_error_codes = true
+pretty = true
+show_column_numbers = true
+show_error_context = true
+namespace_packages = true
+explicit_package_bases = true
+cache_dir = ".mypy_cache"
+exclude = ["^\\.venv$", "^\\.git$", "^build$", "^dist$", "^tests$", "^examples$"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -17,12 +17,12 @@ no files are updated, and a successful comparison does not attest semantics.
 
 from __future__ import annotations
 
-from collections.abc import Callable
 import json
 import os
-from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
 import stat
+from collections.abc import Callable
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Any
 
 MAX_FILE_BYTES = 1024 * 1024
@@ -45,8 +45,13 @@ def _relative_file(value: object) -> str:
     if not text or "\x00" in text or "\\" in text:
         raise ValueError(f"Ruta relativa inválida: {value!r}")
     path = PurePosixPath(text)
-    if (path.is_absolute() or PureWindowsPath(text).drive or ".." in path.parts
-            or path.as_posix() != text or text == "."):
+    if (
+        path.is_absolute()
+        or PureWindowsPath(text).drive
+        or ".." in path.parts
+        or path.as_posix() != text
+        or text == "."
+    ):
         raise ValueError(f"Se requiere una ruta POSIX relativa canónica: {value!r}")
     return text
 
@@ -59,8 +64,7 @@ def _compile(pattern: object, where: str) -> re.Pattern[str]:
         raise ValueError(f"{where}: expresión regular inválida ({exc}).") from exc
     if compiled.groups != 1:
         raise ValueError(
-            f"{where}: pattern debe tener exactamente un grupo de captura "
-            f"(encontrados: {compiled.groups})."
+            f"{where}: pattern debe tener exactamente un grupo de captura (encontrados: {compiled.groups})."
         )
     return compiled
 
@@ -130,16 +134,16 @@ def parse_manifest(text: str) -> dict[str, Any]:
     """Parse strict UTF-8 JSON, including duplicate-key rejection at every level."""
     _text(text, "manifest")
     try:
-        manifest = json.loads(text, object_pairs_hook=_unique_object,
-                              parse_constant=_reject_constant)
+        manifest = json.loads(text, object_pairs_hook=_unique_object, parse_constant=_reject_constant)
     except (json.JSONDecodeError, RecursionError) as exc:
         raise ValueError(f"JSON de manifiesto inválido: {exc}") from exc
     validate_manifest(manifest)
     return manifest
 
 
-def _extract_details(content: str, pattern: str
-                     ) -> tuple[str | None, int | None, int, int | None, int | None]:
+def _extract_details(
+    content: str, pattern: str
+) -> tuple[str | None, int | None, int, int | None, int | None]:
     """Adapted ssot-check extraction; an ambiguous capture has no chosen value."""
     compiled = _compile(pattern, "pattern")
     matches = compiled.finditer(content)
@@ -167,8 +171,7 @@ def extract(content: str, pattern: str) -> tuple[str | None, int | None, int]:
     return value, line, count
 
 
-def check_manifest(manifest: dict[str, Any],
-                   read_text: Callable[[str], str | None]) -> dict[str, Any]:
+def check_manifest(manifest: dict[str, Any], read_text: Callable[[str], str | None]) -> dict[str, Any]:
     """Compare a manifest using an explicit read-only content provider.
 
     ``read_text`` receives validated root-relative POSIX filenames and returns
@@ -190,16 +193,26 @@ def check_manifest(manifest: dict[str, Any],
             cache[filename] = None if content is None else _text(content, filename)
         content = cache[filename]
         evidence: dict[str, Any] = {
-            "file": filename, "line": None, "value": None,
-            "match_count": 0, "reason": "missing_file",
+            "file": filename,
+            "line": None,
+            "value": None,
+            "match_count": 0,
+            "reason": "missing_file",
         }
         if content is not None:
             value, line, count, start, end = _extract_details(content, locator["pattern"])
             spans[(filename, locator["pattern"])] = (
                 (start, end) if start is not None and end is not None else None
             )
-            reason = ("missing_match" if count == 0 else "ambiguous" if count > 1
-                      else "missing_capture" if value is None else "captured")
+            reason = (
+                "missing_match"
+                if count == 0
+                else "ambiguous"
+                if count > 1
+                else "missing_capture"
+                if value is None
+                else "captured"
+            )
             evidence.update(line=line, value=value, match_count=count, reason=reason)
         return evidence
 
@@ -213,22 +226,32 @@ def check_manifest(manifest: dict[str, Any],
             copy = observe(locator)
             canonical_span = spans.get((fact["canonical"]["file"], fact["canonical"]["pattern"]))
             copy_span = spans.get((locator["file"], locator["pattern"]))
-            if (locator["file"] == fact["canonical"]["file"]
-                    and canonical_span is not None and copy_span == canonical_span):
+            if (
+                locator["file"] == fact["canonical"]["file"]
+                and canonical_span is not None
+                and copy_span == canonical_span
+            ):
                 raise ValueError(f"{fact['id']}: canonical y copy capturan la misma ocurrencia.")
             if copy["reason"] == "captured":
                 copy["reason"] = (
-                    "canonical_unavailable" if canonical["reason"] != "canonical"
-                    else "match" if copy["value"] == canonical["value"] else "mismatch"
+                    "canonical_unavailable"
+                    if canonical["reason"] != "canonical"
+                    else "match"
+                    if copy["value"] == canonical["value"]
+                    else "mismatch"
                 )
             copies.append(copy)
-        in_sync = (canonical["reason"] == "canonical"
-                   and all(copy["reason"] == "match" for copy in copies))
-        facts.append({"id": fact["id"], "state": "in_sync" if in_sync else "review_required",
-                      "canonical": canonical, "copies": copies})
+        in_sync = canonical["reason"] == "canonical" and all(copy["reason"] == "match" for copy in copies)
+        facts.append(
+            {
+                "id": fact["id"],
+                "state": "in_sync" if in_sync else "review_required",
+                "canonical": canonical,
+                "copies": copies,
+            }
+        )
     return {
-        "state": "in_sync" if all(fact["state"] == "in_sync" for fact in facts)
-        else "review_required",
+        "state": "in_sync" if all(fact["state"] == "in_sync" for fact in facts) else "review_required",
         "facts": facts,
         "semantic_review": "not_attested",
     }
@@ -259,8 +282,11 @@ def _read_regular_text(path: Path) -> str | None:
     if len(data) > MAX_FILE_BYTES:
         raise ValueError(f"{checked}: supera el límite de 1 MiB.")
     current = _safe_path(checked).lstat()
-    if (len(data) != opened.st_size or _signature(opened) != _signature(after)
-            or _signature(after) != _signature(current)):
+    if (
+        len(data) != opened.st_size
+        or _signature(opened) != _signature(after)
+        or _signature(after) != _signature(current)
+    ):
         raise ValueError(f"El archivo cambió durante la lectura: {checked}")
     try:
         return data.decode("utf-8", errors="strict")

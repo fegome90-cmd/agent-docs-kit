@@ -6,11 +6,11 @@ import contextlib
 import io
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 KIT = Path(__file__).resolve().parents[1]
@@ -37,9 +37,7 @@ class ProductionRegressions(unittest.TestCase):
         self.assertTrue(any("missing.md" in item for item in kit.check(self.root)))
 
     def test_list_continuation_cannot_hide_a_broken_link(self) -> None:
-        (self.root / "AGENTS.md").write_text(
-            "- Evidence\n    [missing](missing.md)\n", encoding="utf-8"
-        )
+        (self.root / "AGENTS.md").write_text("- Evidence\n    [missing](missing.md)\n", encoding="utf-8")
         self.assertTrue(any("missing.md" in item for item in kit.check(self.root)))
 
     @unittest.skipIf(os.name == "nt", "POSIX executable fixture")
@@ -70,9 +68,11 @@ class ProductionRegressions(unittest.TestCase):
 
     def test_version_timeout_is_a_cli_error_without_output(self) -> None:
         output = self.base / "graph"
-        with patch.object(kit.shutil, "which", return_value="/graphify"), patch.object(
-            kit.subprocess, "run", side_effect=subprocess.TimeoutExpired(["graphify"], 10)
-        ), contextlib.redirect_stderr(io.StringIO()):
+        with (
+            patch.object(kit.shutil, "which", return_value="/graphify"),
+            patch.object(kit.subprocess, "run", side_effect=subprocess.TimeoutExpired(["graphify"], 10)),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
             code = kit.main(["graph", str(self.root), "--output", str(output), "--apply"])
         self.assertEqual(code, 3)
         self.assertFalse(output.exists())
@@ -81,11 +81,15 @@ class ProductionRegressions(unittest.TestCase):
         output = self.base / "graph"
         responses = [
             subprocess.CompletedProcess(["graphify", "--version"], 0, "graphify 0.9.26\n", ""),
-            subprocess.TimeoutExpired(["graphify", "extract"], 0.1, output=b"partial output", stderr=b"warning"),
+            subprocess.TimeoutExpired(
+                ["graphify", "extract"], 0.1, output=b"partial output", stderr=b"warning"
+            ),
         ]
-        with patch.object(kit.shutil, "which", return_value="/graphify"), patch.object(
-            kit.subprocess, "run", side_effect=responses
-        ), contextlib.redirect_stderr(io.StringIO()):
+        with (
+            patch.object(kit.shutil, "which", return_value="/graphify"),
+            patch.object(kit.subprocess, "run", side_effect=responses),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
             code = kit.main(["graph", str(self.root), "--output", str(output), "--apply"])
         self.assertEqual(code, 3)
         record = json.loads((output / "run.json").read_text())

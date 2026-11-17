@@ -1,20 +1,24 @@
-.PHONY: install lint test build check clean
+.PHONY: install lint typecheck test build check clean
 
 install:
-	uv sync --extra dev || pip install -e ".[dev]"
+	uv sync --extra dev
 
 lint:
-	ruff check .
-	ruff format --check .
+	uv run ruff check .
+	uv run ruff format --check .
+
+typecheck:
+	uv run mypy .
+	uv run pyrefly check
 
 test:
-	pytest
+	uv run pytest
 
 build:
-	python -m build
+	uv build
 
-check: lint test
+check: lint typecheck test
 
 clean:
-	rm -rf dist build *.egg-info .pytest_cache .ruff_cache
+	rm -rf dist build *.egg-info .pytest_cache .ruff_cache .mypy_cache
 	find . -type d -name __pycache__ -exec rm -rf {} +
