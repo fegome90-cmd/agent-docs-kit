@@ -1,0 +1,242 @@
+{
+  "parent_thread_id": "01a1deb6-9c74-70e1-9385-aac8577b609b",
+  "parent_model": "gpt-6.1-sol",
+  "native_tool_trace": [
+    {
+      "at": "2026-11-15T10:18:08.291Z",
+      "tool": "spawn_agent",
+      "call_id": "call_625cba85cc154d0f98ba1017ee1ce52d",
+      "args": {
+        "task_name": "reviewer_a",
+        "agent_type": "default",
+        "fork_turns": "none",
+        "message_sha256": "dacc1bac6010b7a1d618c8ef5c83eefed7f49d19426eb960f645d50cc82e0e52",
+        "message_omitted": "Dispatch body is omitted; allowed reading list is in the saved controller prompt."
+      }
+    },
+    {
+      "at": "2026-11-15T10:18:08.318Z",
+      "tool_result_for": "spawn_agent",
+      "call_id": "call_625cba85cc154d0f98ba1017ee1ce52d",
+      "output": {
+        "task_name": "/root/reviewer_a"
+      }
+    },
+    {
+      "at": "2026-11-15T10:18:21.361Z",
+      "tool": "spawn_agent",
+      "call_id": "call_057c317ae1274196b0c7771390e3bc03",
+      "args": {
+        "task_name": "reviewer_b",
+        "agent_type": "default",
+        "fork_turns": "none",
+        "message_sha256": "7a4b59f7d6fafeaf9f7448a5bd16e507650c7f55ea626f8f1ce18af81780bf06",
+        "message_omitted": "Dispatch body is omitted; allowed reading list is in the saved controller prompt."
+      }
+    },
+    {
+      "at": "2026-11-15T10:18:21.417Z",
+      "tool_result_for": "spawn_agent",
+      "call_id": "call_057c317ae1274196b0c7771390e3bc03",
+      "output": {
+        "task_name": "/root/reviewer_b"
+      }
+    },
+    {
+      "at": "2026-11-15T10:18:23.802Z",
+      "tool": "wait_agent",
+      "call_id": "call_4a0952568ded482982c1ca13b7d99cb2",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:18:33.832Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_4a0952568ded482982c1ca13b7d99cb2",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:18:36.623Z",
+      "tool": "wait_agent",
+      "call_id": "call_c5d555b1a2454cbbb8737537f8633c76",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:18:46.689Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_c5d555b1a2454cbbb8737537f8633c76",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:18:50.719Z",
+      "tool": "list_agents",
+      "call_id": "call_807a2f0eb6474d9e8dacf68309c00656",
+      "args": {}
+    },
+    {
+      "at": "2026-11-15T10:18:50.756Z",
+      "tool_result_for": "list_agents",
+      "call_id": "call_807a2f0eb6474d9e8dacf68309c00656",
+      "output": {
+        "agents": [
+          {
+            "agent_name": "/root",
+            "agent_status": "running"
+          },
+          {
+            "agent_name": "/root/reviewer_a",
+            "agent_status": "running"
+          },
+          {
+            "agent_name": "/root/reviewer_b",
+            "agent_status": "running"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-11-15T10:18:52.599Z",
+      "tool": "wait_agent",
+      "call_id": "call_54cc812248154e72b30931cf3e62175a",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:02.630Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_54cc812248154e72b30931cf3e62175a",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:05.134Z",
+      "tool": "wait_agent",
+      "call_id": "call_479751f539d14f999771266001f587bc",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:15.273Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_479751f539d14f999771266001f587bc",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:19.958Z",
+      "tool": "wait_agent",
+      "call_id": "call_6570a166fcfd4dcc8c4088d2f1864c8b",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:29.806Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_6570a166fcfd4dcc8c4088d2f1864c8b",
+      "output": {
+        "message": "Wait completed.",
+        "timed_out": false
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:32.127Z",
+      "tool": "wait_agent",
+      "call_id": "call_5fdda52d6feb444fa39a5570e069f0d9",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:42.158Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_5fdda52d6feb444fa39a5570e069f0d9",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:44.370Z",
+      "tool": "wait_agent",
+      "call_id": "call_46fed87778424b5f8b331bc5e0842784",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:54.468Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_46fed87778424b5f8b331bc5e0842784",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:56.663Z",
+      "tool": "wait_agent",
+      "call_id": "call_23dd1d66dc2d4c64a183d3a85411c462",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:19:59.039Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_23dd1d66dc2d4c64a183d3a85411c462",
+      "output": {
+        "message": "Wait completed.",
+        "timed_out": false
+      }
+    },
+    {
+      "at": "2026-11-15T10:20:00.649Z",
+      "tool": "list_agents",
+      "call_id": "call_caf82738ad094436b03edac39d8054d4",
+      "args": {}
+    },
+    {
+      "at": "2026-11-15T10:20:00.676Z",
+      "tool_result_for": "list_agents",
+      "call_id": "call_caf82738ad094436b03edac39d8054d4",
+      "output": {
+        "agents": [
+          {
+            "agent_name": "/root",
+            "agent_status": "running"
+          },
+          {
+            "agent_name": "/root/reviewer_a",
+            "agent_status": {
+              "completed": "Read-only audit completed for frozen `stages/P03`. Five findings require correction before Gate A can be considered satisfied.\n\nIdentity: runtime task `/root/reviewer_a`, Reviewer A. The parent specified `fork_turns:none`; no parent findings or prior conversation were supplied in the task. This establishes conversational separation only. Host instructions and filesystem isolation were not independently verified.\n\n**A-001 — Major — Required wire field silently synthesized**\n\nLocation: `stages/P03/doc_links.py:114`\n\n`parse_links` inserts `inventory_only: []` when the field is missing. Design §9 requires that field, and IR-007 explicitly prohibits treating its omission as authoring convenience at the wire boundary.\n\nReproduction shape: serialize an otherwise valid links map without `inventory_only`. The parser adds the field and accepts the object instead of rejecting the incomplete schema.\n\nMinimal correction: remove the insertion. If an authoring helper supplies defaults, keep that separate from strict wire parsing.\n\n**A-002 — Major — Unicode separators create false Markdown section boundaries**\n\nLocation: `stages/P03/doc_links.py:149`\n\n`text.splitlines(keepends=True)` recognizes separators beyond LF, including U+0085, U+2028 and U+2029. The contract requires exact UTF-8/LF section boundaries. A heading following one of these characters inside an LF-delimited line becomes a separate parser line and can terminate or select a span.\n\nReproduction shape: document bytes equivalent to `## A\\ntext\\u2028## B\\nbody\\n`, with `## A` selected. The implementation recognizes `## B` as another heading, although it does not begin after an LF. Consequently, the selected raw-byte span ends early.\n\nMinimal correction: iterate exclusively over LF-delimited lines while retaining their exact byte offsets. Add fixtures containing non-LF Unicode separators before heading-like text.\n\n**A-003 — Blocker — Revalidation cannot represent accepted bases and heads**\n\nLocation: `stages/P03/doc_evidence.py:252–259`\n\n`revalidate` reconstructs every base from its mutable `origin`, then calls `capture_evidence` with empty heads for every document. Proposal revalidation compares those synthetic empty heads and bootstrap bases against the supplied envelope.\n\nReproduction shape: supply valid evidence for a previously accepted document with a nonempty expected-head list and an accepted immutable document differing from its original adoption file. Calling `revalidate(..., phase='proposal')` reports `heads_changed` and/or `base_documents_changed` even when the actual accepted selection and reviewed bytes remain unchanged.\n\nDeferred resolver wiring at P06 is expected, but this prerequisite API has no parameter or resolution mechanism through which callers can supply the real current accepted bases and heads.\n\nMinimal correction: provide a usable, explicit mechanism for revalidation to obtain selected-view accepted bases and current heads. Preserve bootstrap handling separately; do not substitute empty history for an accepted state.\n\n**A-004 — Major — Selected freshness checks unrelated documents and event identities**\n\nLocation: `stages/P03/doc_evidence.py:269–274`\n\nSelected revalidation compares every other envelope document, including its heads and complete `BaseDocument` record. IR-007 requires only actual transitive external section dependencies, compared by document content hash; unrelated documents and content-equal replacement acceptances must not invalidate freshness.\n\nReproduction shape: map independent documents A and B, with no A→B section dependency. Seal evidence containing both, then change B while A and A’s obligations remain identical. Selected freshness for A reports `dependency_document_changed`. A nonempty recorded head for B also differs from the synthetic empty heads constructed at line 254.\n\nMinimal correction: derive A’s transitive external dependency document set from section relationships. Resolve those dependencies uniquely in the selected view and compare their content hashes, excluding unrelated documents and acceptance-event identity changes.\n\n**A-005 — Major — Evidence reads do not consistently enforce bounded memory**\n\nLocations: `stages/P03/doc_evidence.py:59`, `stages/P03/doc_evidence.py:68–72`, `stages/P03/git_gate.py:113–121`, `stages/P03/living_docs.py:122–126`\n\nIndex fingerprints call `_Git.blob` without a maximum. That method captures the entire blob in memory, so fingerprinting a large binary is not chunk bounded.\n\nWorktree bounded reads check file size before calling `_fingerprint`, but `_fingerprint` accumulates every chunk without enforcing the requested maximum during reading. A file growing after the preliminary size check can exceed the memory bound before the eventual size/race rejection.\n\nReproduction shapes:\n\n- Select a very large staged source and capture index evidence: the full blob is materialized solely to compute size/hash.\n- Grow a worktree file after the preliminary size check: reading continues and accumulates data past `maximum`, even though the operation ultimately fails.\n\nMinimal correction: stream index fingerprints in bounded chunks. For bounded worktree content reads, enforce the maximum inside the read loop and stop immediately once exceeded.\n\nAudit status: **completed** through static file inspection.  \nTests, imports, project-code execution, network and mutations: **not_run** as required.  \nLegacy compatibility execution: **not_run**; no runtime compatibility verdict is claimed.\n\nThis report covers P01–P03 prerequisites only and is **not final release approval**."
+            }
+          },
+          {
+            "agent_name": "/root/reviewer_b",
+            "agent_status": {
+              "completed": "Audit: **completed** for the P01–P03 contracts and relevant frozen implementation/test paths. Tests and execution: **not_run**, as required. No files were changed. This round is **not final release approval**.\n\nNative task identity: `/root/reviewer_b`. No authoritative model identifier was provided. The assignment declares `fork_turns:none`; I received no parent findings or conversation history. This establishes conversation isolation only, not isolation from host instructions or a demonstrated filesystem allowlist.\n\n**B-001 — Major — Required wire field is silently synthesized**\n\nAffected: `stages/P03/doc_links.py:114`.\n\nIR-007 requires `inventory_only` at the wire level, including `[]` when empty. `parse_links` adds it when absent, so a nonconforming serialized map passes validation.\n\nReproduction shape: serialize an otherwise valid fixture after deleting `inventory_only`; `parse_links` restores the missing field and accepts it. `tests/test_doc_links.py:76` checks other missing/unknown schema cases but omits this required-field case.\n\nMinimal correction: remove the default insertion from the wire parser. If authoring convenience is desired, implement it before serialization and require the parser to reject omission.\n\n**B-002 — Major — Revalidation cannot represent reviewed accepted bases or applicable parent heads**\n\nAffected: `stages/P03/doc_evidence.py:252–259`; `stages/P03/doc_evidence.py:269–274`.\n\n`revalidate` reconstructs every base from its mutable `origin` and hardcodes every current head list to `[]`. Consequently:\n\n- Proposal evidence containing a legitimate nonempty parent head necessarily becomes stale through `heads_changed`, even when that parent remains current.\n- Selected freshness compares every other mapped document, including unrelated documents, and compares parent IDs rather than only relevant dependency content.\n- Accepted immutable revisions cannot be supplied as current base documents through this API.\n\nThis contradicts IR-007: proposal applicability includes actual expected heads/base documents; selected freshness requires only actual transitive dependency obligations, content comparison, and unique external selections. P06 resolver wiring is deferred, but this prerequisite API provides no parameter through which that resolver can supply those facts.\n\nReproduction shape: capture valid evidence with a nonempty head via `capture_evidence`; call proposal revalidation without changing anything. The reconstructed empty heads differ. Alternatively, add an unrelated mapped document with a nonempty captured head: selected revalidation reports `dependency_heads_changed` despite no dependency edge or content change.\n\nThe latter incorrect behavior is explicitly required by `stages/P03/tests/test_doc_impact.py:156–176`, rather than detected as a regression.\n\nMinimal correction: let revalidation receive verified resolved bases and selections/heads. Derive external obligations from the selected document’s transitive section dependencies; compare their content hashes and require unique selection. Add unchanged-parent applicability and unrelated content-equal acceptance fixtures.\n\n**B-003 — Major — Unicode line separators can create nonexistent ATX anchors**\n\nAffected: `stages/P03/doc_links.py:149–161`.\n\n`str.splitlines(keepends=True)` recognizes separators beyond LF, including vertical tab and Unicode line separator. The parser then treats the following text as a fresh Markdown line, although the contract specifies exact UTF-8/LF spans.\n\nReproduction shape: a document containing `prefix\\v## Catalog\\nbody\\n` can produce a selectable `## Catalog` heading after the vertical tab. There is no LF boundary before that heading. The same issue can introduce false terminating headings, changing authorized edit spans.\n\nExisting raw-byte tests cover CRLF rejection and multibyte characters, but not non-LF separators.\n\nMinimal correction: split exclusively on `\\n`, preserving byte offsets and final-line behavior. Add fixtures proving vertical tab and Unicode separators do not introduce anchors or terminate spans.\n\n**B-004 — Major — Index source fingerprinting materializes unbounded blobs**\n\nAffected: `stages/P03/doc_evidence.py:59–60`, `stages/P03/doc_evidence.py:86–88`; underlying reader `stages/P03/git_gate.py:113–121`.\n\nWorktree fingerprints use chunked hashing, but index fingerprints call `_git.blob(entry, maximum=None)`. That reader captures the entire blob in memory. `capture_evidence` invokes this for every sealed source, and `assert_unchanged` reads them again. The 8 MiB envelope limit constrains serialized metadata, not source blob allocation.\n\nReproduction shape: stage a very large watched binary source. Index capture reads the entire binary through `capture_output=True` before hashing; it has no blob-size ceiling or streaming fingerprint path. A small evidence envelope does not prevent excessive memory consumption.\n\nThis misses P02’s explicit bounded-chunk source hashing requirement and R14’s bounded processing contract.\n\nMinimal correction: provide a streaming index fingerprint operation with bounded buffering, or enforce a documented finite source-size limit before allocation. Keep bounded `read` for prose/control inputs. Add a test that verifies the fingerprint path does not request an unlimited materialized blob.\n\n**B-005 — Major — Snapshot-refresh test never evaluates the refreshed snapshot**\n\nAffected: `stages/P03/tests/test_doc_evidence.py:134–143`.\n\nThe test changes `snapshot.json` only in the worktree, then revalidates using the index view. Because the fixture staged its original snapshot, the revalidator reads the unchanged original snapshot. `matches_review` therefore does not establish that refreshed snapshot metadata preserves content obligations. The changed evidence ID is already explained by switching from worktree to index.\n\nThis leaves an advertised P02 freshness property unproven and would not catch a revalidator that incorrectly rejects refreshed staged snapshot metadata.\n\nMinimal correction: exercise the changed snapshot in the worktree view, then separately stage the refreshed snapshot and exercise the index view. Assert unchanged content remains fresh and a source change remains stale after snapshot refresh. Keep cross-view identity as a separate assertion.\n\nNo finding above depends on implementing P04–P07 publishing, conflict resolution, or accepted-envelope wiring early."
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "report_sha256": "31d32c8245e13772f7db48124b3c47cc8adc5a19aac46a009445b648cfd88fea",
+  "limitations": "Conversation isolation requested through native fork_turns:none. Host instruction and filesystem isolation are not independently demonstrated. Child model identity is not inferred from parent metadata."
+}

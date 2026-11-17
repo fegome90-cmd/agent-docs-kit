@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "facts": [
+    {
+      "id": "kit-version",
+      "canonical": {
+        "file": "tools/agent-docs-kit/agent_docs_kit.py",
+        "pattern": "(?m)^VERSION = \"([^\"]+)\"$"
+      },
+      "copies": [
+        {
+          "file": "tools/agent-docs-kit/living_docs.py",
+          "pattern": "(?m)^VERSION = \"([^\"]+)\"$"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+# The sole extra dependency for append. Verify/render/facts/index checks stay stdlib-only.
+portalocker==4.4.2

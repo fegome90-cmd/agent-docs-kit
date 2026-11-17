@@ -1,0 +1,50 @@
+{
+  "schema": "agent-docs-kit/links",
+  "schema_version": 1,
+  "project_id": "12345678-1234-4234-8234-123456789abc",
+  "documents": [
+    {
+      "id": "project",
+      "origin": "PROJECT.md",
+      "sections": [
+        {
+          "id": "project.catalog",
+          "selector": {
+            "kind": "atx",
+            "heading": "## Catalog"
+          },
+          "claim_kind": "observed",
+          "watches": [
+            "src/catalog.py"
+          ],
+          "depends_on": []
+        },
+        {
+          "id": "project.summary",
+          "selector": {
+            "kind": "atx",
+            "heading": "## Summary"
+          },
+          "claim_kind": "planned",
+          "watches": [],
+          "depends_on": [
+            "project.catalog"
+          ]
+        },
+        {
+          "id": "project.runtime",
+          "selector": {
+            "kind": "atx",
+            "heading": "## Runtime"
+          },
+          "claim_kind": "constraint",
+          "watches": [
+            "src/runtime.py"
+          ],
+          "depends_on": []
+        }
+      ]
+    }
+  ],
+  "inventory_only": []
+}

@@ -1,0 +1,225 @@
+{
+  "parent_thread_id": "01a1dea8-9cce-72d3-b61c-a2d5a77655b2",
+  "parent_model": "gpt-6.1-sol",
+  "native_tool_trace": [
+    {
+      "at": "2026-11-15T10:02:53.695Z",
+      "tool": "spawn_agent",
+      "call_id": "call_a1a0b92d83204a36842517d3b0f0b42c",
+      "args": {
+        "task_name": "readiness_review",
+        "agent_type": "default",
+        "fork_turns": "none",
+        "message_sha256": "a566bf7818859ee71a7946394dc332ef123b55644093403a2450b62a033d400a",
+        "message_omitted": "Dispatch body is omitted; allowed reading list is in the saved controller prompt."
+      }
+    },
+    {
+      "at": "2026-11-15T10:02:53.712Z",
+      "tool_result_for": "spawn_agent",
+      "call_id": "call_a1a0b92d83204a36842517d3b0f0b42c",
+      "output": {
+        "task_name": "/root/readiness_review"
+      }
+    },
+    {
+      "at": "2026-11-15T10:03:09.181Z",
+      "tool": "spawn_agent",
+      "call_id": "call_0e54ae871e754a059939b3e9638116b8",
+      "args": {
+        "task_name": "integration_review",
+        "agent_type": "default",
+        "fork_turns": "none",
+        "message_sha256": "1507ba8c828e316178ccd17bdf8ce6d5d78497f4f9594d8a5166ac52160c752e",
+        "message_omitted": "Dispatch body is omitted; allowed reading list is in the saved controller prompt."
+      }
+    },
+    {
+      "at": "2026-11-15T10:03:09.202Z",
+      "tool_result_for": "spawn_agent",
+      "call_id": "call_0e54ae871e754a059939b3e9638116b8",
+      "output": {
+        "task_name": "/root/integration_review"
+      }
+    },
+    {
+      "at": "2026-11-15T10:03:12.046Z",
+      "tool": "wait_agent",
+      "call_id": "call_e47f8b92a9d5483ca494a8420baf636b",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:03:22.062Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_e47f8b92a9d5483ca494a8420baf636b",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:03:24.148Z",
+      "tool": "wait_agent",
+      "call_id": "call_7f33db83eba3428fa3033dfae1c4438a",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:03:34.162Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_7f33db83eba3428fa3033dfae1c4438a",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:03:35.799Z",
+      "tool": "list_agents",
+      "call_id": "call_c5a745b8cbee40febb97b0f967c2d845",
+      "args": {}
+    },
+    {
+      "at": "2026-11-15T10:03:35.843Z",
+      "tool_result_for": "list_agents",
+      "call_id": "call_c5a745b8cbee40febb97b0f967c2d845",
+      "output": {
+        "agents": [
+          {
+            "agent_name": "/root",
+            "agent_status": "running"
+          },
+          {
+            "agent_name": "/root/integration_review",
+            "agent_status": "running"
+          },
+          {
+            "agent_name": "/root/readiness_review",
+            "agent_status": "running"
+          }
+        ]
+      }
+    },
+    {
+      "at": "2026-11-15T10:03:38.326Z",
+      "tool": "wait_agent",
+      "call_id": "call_db95cec618084053bf4596d4dca8a786",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:03:48.344Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_db95cec618084053bf4596d4dca8a786",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:03:51.620Z",
+      "tool": "wait_agent",
+      "call_id": "call_35641204c3804c5fa6cb9352cd670720",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:04:01.631Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_35641204c3804c5fa6cb9352cd670720",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:04:06.567Z",
+      "tool": "wait_agent",
+      "call_id": "call_591a0873046b401e8fd8450bed719d8e",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:04:10.770Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_591a0873046b401e8fd8450bed719d8e",
+      "output": {
+        "message": "Wait completed.",
+        "timed_out": false
+      }
+    },
+    {
+      "at": "2026-11-15T10:04:12.813Z",
+      "tool": "wait_agent",
+      "call_id": "call_f19d1f4048824b82b0eeafe850346080",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:04:22.825Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_f19d1f4048824b82b0eeafe850346080",
+      "output": {
+        "message": "Wait timed out.",
+        "timed_out": true
+      }
+    },
+    {
+      "at": "2026-11-15T10:04:24.649Z",
+      "tool": "wait_agent",
+      "call_id": "call_5ab75c9099404efaa00e621fb41cef69",
+      "args": {
+        "timeout_ms": 10000
+      }
+    },
+    {
+      "at": "2026-11-15T10:04:28.998Z",
+      "tool_result_for": "wait_agent",
+      "call_id": "call_5ab75c9099404efaa00e621fb41cef69",
+      "output": {
+        "message": "Wait completed.",
+        "timed_out": false
+      }
+    },
+    {
+      "at": "2026-11-15T10:04:30.740Z",
+      "tool": "list_agents",
+      "call_id": "call_da3285811ddc46c89b8c4e959b346ba4",
+      "args": {}
+    },
+    {
+      "at": "2026-11-15T10:04:30.778Z",
+      "tool_result_for": "list_agents",
+      "call_id": "call_da3285811ddc46c89b8c4e959b346ba4",
+      "output": {
+        "agents": [
+          {
+            "agent_name": "/root",
+            "agent_status": "running"
+          },
+          {
+            "agent_name": "/root/integration_review",
+            "agent_status": {
+              "completed": "CB-001 — Major — Opt-in `status` lacks a defined adapter for legacy snapshot paths.\n\nAffected sources:\n\n- `<workspace>/agent-docs-kit-build-v0.5.0-rc.1-egm/inputs/plan.md:158–159,258–261`\n- `<workspace>/agent-docs-kit-build-v0.5.0-rc.1-egm/inputs/design.md:167–171`\n- `<workspace>/agent-docs-kit-build-v0.5.0-rc.1-egm/baseline/living_docs.py:474–478`\n- `<workspace>/agent-docs-kit-build-v0.5.0-rc.1-egm/baseline/agent_docs_kit.py:364–366,458–461`\n\nDiscrepancy: existing `status` resolves `snapshot_path` against the process working directory and permits a snapshot outside ROOT. P07 preserves that signature and promises unchanged snapshot resolution, but its proposed `check_knowledge` consumes a root-relative string path through `EvidenceView`. No conversion or external-snapshot handling is specified. Passing the legacy argument unchanged can select different bytes; converting every argument to ROOT-relative form cannot represent supported external snapshots.\n\nMinimal fix: specify the adapter explicitly. Preserve legacy resolution and pass the already-read, validated snapshot plus its byte hash into the knowledge evaluator, with a defined provenance representation for an external snapshot. Alternatively, explicitly document and test an opt-in restriction for external snapshots, narrowing the existing compatibility promise. Include regression cases with CWD different from ROOT and an external snapshot.\n\nNo additional actionable integration findings.\n\nRead completeness: fully read all ten listed files: persona, standard, design, plan, and all six baseline modules. The persona was read first. Some combined output was truncated; missing portions were subsequently read in bounded ranges.\n\nIsolation: accessed only the listed files using read-only shell commands. No tests, imports, writes, network access, memory access, connectors, or child agents were used. The runtime exposes a read-only filesystem sandbox; the narrower file allowlist was followed through tool arguments, without probing its enforcement."
+            }
+          },
+          {
+            "agent_name": "/root/readiness_review",
+            "agent_status": {
+              "completed": "Review incomplete for implementation readiness: 7 actionable findings. No tests or implementation were performed.\n\n**IR-001 — Blocker: partial review can refresh unreviewed sections**\n\nSources: `inputs/design.md:89–98,114–128,235–243`; `inputs/plan.md:158–167,180–186,240–242`.\n\nEvidence seals a source set, while `reviewed_sections` can name only some sections. The selected document then acquires the new evidence, but no rule specifies how unreviewed sections retain their previous review obligations. If two sections become stale and only one is reviewed, implementations could refresh both by accepting the new document-wide evidence.\n\nMinimal fix: either require `reviewed_sections` to cover every affected section in the document before accepting, or define per-section retained evidence and freshness. Add a test where two sections change and only one is reviewed; the other must remain pending.\n\n**IR-002 — Blocker: map revisions lack an executable transition**\n\nSources: `inputs/design.md:59–81,114–128,239`; `inputs/plan.md:184–186,240–243`; `inputs/acceptance-cases.tsv:49`.\n\nRenaming sections or changing structure requires a new map and a complete explicit review. However, existing proposal rules preserve headings, section order and all bytes outside authorized spans. No mode or request field identifies the old/new map transition, defines how old spans map to new ones, or authorizes structural changes. The existing test only checks that changing the map invalidates freshness.\n\nMinimal fix: define the map-transition workflow and its authorization boundary: old/new map references, complete-document review requirement, permitted structural edits and baseline selection. Add a successful structural migration test and a rejection test for an incomplete review.\n\n**IR-003 — Major: resolve has multiple parents but no defined editing baseline**\n\nSources: `inputs/design.md:114–128,148–150,217–223`; `inputs/plan.md:180–186,203–221`; `inputs/acceptance-cases.tsv:38`.\n\nA resolution must name every conflicting head, but outside-span preservation and `BaseDocument.sha256` assume one document baseline. When conflicting parents contain different documents, the implementer must choose which parent supplies unchanged bytes, or invent a merge policy. That choice determines whether a resolution is accepted.\n\nMinimal fix: specify an explicit baseline parent for `resolve`, or define full-document resolution authorization. State what must match across all parent evidence and what is reviewed anew. Test conflicting parents that differ outside the requested section.\n\n**IR-004 — Major: index-view proposal and acceptance inputs are underspecified**\n\nSources: `inputs/design.md:29,118–124,132–140,160–169`; `inputs/plan.md:134–143,180–188,203–221`.\n\nAll operation reads must use one view, and `propose`/`accept` inherit the evidence view. It is not specified whether request, candidate, proposal and review files must themselves be staged for an index-view operation. A newly written proposal is absent from the index until staging, and `accept` also needs the live acceptance history under its global lock.\n\nMinimal fix: enumerate which inputs come from the selected view and which are explicit control inputs or live publisher state. Define the required staging sequence for index-origin proposals and how concurrent live acceptances participate in parent checks. Add an index-view propose→accept test with divergent local/staged inputs.\n\n**IR-005 — Major: published-event preservation is not specified by P07**\n\nSources: `inputs/design.md:26,136–144`; `inputs/plan.md:263–267`; `inputs/acceptance-cases.tsv:53`.\n\nR01 preserves published snapshot, event and revision bytes. P07 explicitly protects referenced revision/review artifacts against HEAD, but does not specify preservation of previously published acceptance events. Rewriting or removing an event can alter the DAG while leaving its revision files untouched.\n\nMinimal fix: specify preservation of previously published event bytes, including the permitted append behavior for existing JSONL segments. Include tests for deleting an old acceptance, modifying its parents and truncating a published segment. Clarify whether existing snapshot preservation already covers R01 or requires an additional check.\n\n**IR-006 — Major: exact write allowlist is missing for P08**\n\nSources: `egm/resources/document_standards/implementation-readiness-standard.md:29–33`; `inputs/plan.md:274–283,293–296`.\n\nP08 names an unspecified “example” of map/requests/review, “the two original modules,” version assertions without paths, and release outputs without exact destinations. This cannot form the required explicit file allowlist.\n\nMinimal fix: enumerate the exact repository-relative source, fixture and documentation paths; identify both version-bearing modules and affected version tests. Give generated distribution outputs a bounded output directory/glob.\n\n**IR-007 — Major: strict shared schemas remain ambiguous**\n\nSources: `inputs/design.md:73,210–239`; `inputs/plan.md:80,137–143,203–206`.\n\nValidators reject unknown keys, yet `inventory_only` is optional in §4.1 and required in §9. `reviewed_inputs`, essential to freshness, has no declared schema or precise derivation. `AcceptancePayload.revision` also lacks an explicit target definition, while adjacent reference types do not map unambiguously to individual fields.\n\nMinimal fix: reconcile optional versus required fields and define the exact types and reference targets for the shared objects. Specify whether `reviewed_inputs` is persisted or derived, and the deterministic projection used for applicability across views. Add valid minimal fixtures and rejection cases shared across P01–P07.\n\nAll five authorized files were fully read: the persona first, the readiness standard, complete design, complete plan and acceptance TSV. The superseded planning-only status was not treated as a finding.\n\nIsolation observed: only the five listed files were read through shell commands; no other repository, memory, connector, credential, network, test, artifact or child agent was accessed. The session reports a read-only filesystem. That prevents writes but does not itself establish a five-file read sandbox; isolation beyond those observations was not probed."
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "report_sha256": "5284b79951ae14fdaa5dc4d437adc69f2bc9688d2649c2ae3cf339c482dcd862",
+  "limitations": "Conversation isolation requested through native fork_turns:none. Host instruction and filesystem isolation are not independently demonstrated. Child model identity is not inferred from parent metadata."
+}

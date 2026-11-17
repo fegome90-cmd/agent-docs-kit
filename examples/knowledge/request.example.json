@@ -1,0 +1,65 @@
+{
+  "schema": "agent-docs-kit/proposal-request",
+  "schema_version": 1,
+  "request_id": "2aad5013-e2c9-465d-a256-9c0d6bc86393",
+  "project_id": "12345678-1234-4234-8234-123456789abc",
+  "document_id": "project",
+  "mode": "bootstrap",
+  "candidate_path": "PROJECT.md",
+  "expected_parents": [],
+  "reviewed_sections": [
+    "project.catalog",
+    "project.runtime",
+    "project.summary"
+  ],
+  "reason": "Adopt exact synthetic origin prose after declared agent review.",
+  "evidence": {
+    "schema": "agent-docs-kit/evidence",
+    "schema_version": 1,
+    "project_id": "12345678-1234-4234-8234-123456789abc",
+    "detector_version": "knowledge/1",
+    "view": "worktree",
+    "map": {
+      "path": "links.json",
+      "sha256": "6731499bc458c65798af3642ffc975c419f9a56194a8faa0467245ea24376547"
+    },
+    "baseline": {
+      "path": "snapshot.json",
+      "sha256": "44b05e39fff8b047317bab759f6293ebbc0020d900c7ef6df6a71a8813eaacad"
+    },
+    "base_documents": [
+      {
+        "document_id": "project",
+        "proposal_id": null,
+        "sha256": "be70e066622af8720942255eda285651cfb3e69cd545eb835d587c729a3d0a33"
+      }
+    ],
+    "heads": {
+      "project": []
+    },
+    "files": [
+      {
+        "path": "src/catalog.py",
+        "size": 16,
+        "sha256": "9ff1036a32f2b51d570f423e8ff8580fddea40f9319ebd44ce8865a858cf4c05",
+        "present": true
+      },
+      {
+        "path": "src/runtime.py",
+        "size": 15,
+        "sha256": "bc34a4b8faaf16fba5912f01d07d1652318596916d138fbcb9a6dd974e50d196",
+        "present": true
+      }
+    ],
+    "inventory": {
+      "policy_sha256": "4c2ccdc1c1f5a0fdd2f30a4cd05b5edeee90f110a1c865014df4bb2c05b18bee",
+      "eligible_paths": [
+        "src/catalog.py",
+        "src/runtime.py"
+      ],
+      "not_evaluated": []
+    },
+    "observed_at": "2026-11-15T11:43:14Z",
+    "evidence_id": "695ed3e0570b97c5033ad6aa1f79a18254d793eb8a3050dec2552dfbf7f88257"
+  }
+}

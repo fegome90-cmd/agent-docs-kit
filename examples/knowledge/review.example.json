@@ -1,0 +1,13 @@
+{
+  "schema": "agent-docs-kit/review",
+  "schema_version": 1,
+  "proposal_id": "210aee4f9fea56ef3e35b29f585cf1df636d6fd0d92a96cfe6c601211116cfc0",
+  "decision": "accept",
+  "reviewer": {
+    "kind": "agent",
+    "id": "example-reviewer"
+  },
+  "reason": "Reviewed all managed sections against the synthetic fixture sources.",
+  "review_reference": "fixture://knowledge-example/bootstrap",
+  "constraint_authorizations": []
+}

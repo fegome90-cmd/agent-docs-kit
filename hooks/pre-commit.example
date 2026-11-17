@@ -1,0 +1,18 @@
+#!/bin/sh
+# Review and merge this example into an existing hook manually. No installer is
+# provided; this example never stages, logs, repairs, or commits any file.
+# Paths below are ROOT-relative arguments; they are never evaluated as commands.
+set -eu
+
+ROOT=$(git --no-optional-locks -c core.fsmonitor=false rev-parse --show-toplevel)
+PYTHON=${AGENT_DOCS_KIT_PYTHON:-python3}
+SNAPSHOT=${AGENT_DOCS_KIT_SNAPSHOT:-docs/living/snapshots/base.json}
+HISTORY=${AGENT_DOCS_KIT_HISTORY:-docs/living/history}
+FACTS=${AGENT_DOCS_KIT_FACTS:-}
+
+if [ -n "$FACTS" ]; then
+    exec "$PYTHON" "$ROOT/tools/agent-docs-kit/agent_docs_kit.py" index-check "$ROOT" \
+        --snapshot "$SNAPSHOT" --history "$HISTORY" --facts "$FACTS" --json
+fi
+exec "$PYTHON" "$ROOT/tools/agent-docs-kit/agent_docs_kit.py" index-check "$ROOT" \
+    --snapshot "$SNAPSHOT" --history "$HISTORY" --json

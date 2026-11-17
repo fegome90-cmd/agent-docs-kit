@@ -1,0 +1,29 @@
+{
+  "exit": 0,
+  "seconds": 19.041972292005084,
+  "command": [
+    "/opt/homebrew/bin/codex",
+    "exec",
+    "--ignore-user-config",
+    "--ephemeral",
+    "--disable",
+    "memories",
+    "--disable",
+    "hooks",
+    "--disable",
+    "apps",
+    "--disable",
+    "plugins",
+    "--enable",
+    "multi_agent",
+    "--sandbox",
+    "read-only",
+    "--skip-git-repo-check",
+    "-C",
+    "<workspace>/agent-docs-kit-build-v0.5.0-rc.1-egm/reviews/isolation-probe",
+    "--json",
+    "-o",
+    "<workspace>/agent-docs-kit-build-v0.5.0-rc.1-egm/reviews/isolation-probe/result.md",
+    "-"
+  ]
+}
