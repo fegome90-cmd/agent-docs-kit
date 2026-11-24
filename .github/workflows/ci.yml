@@ -52,7 +52,7 @@ jobs:
             echo "### pyrefly (Python ${{ matrix.python-version }})"
             echo "**$N.** Ver \`DEBT.md\`."
           } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: typecheck-python-${{ matrix.python-version }}
@@ -92,7 +92,7 @@ jobs:
             echo '```'
             echo "Fallos preexistentes del candidato. Ver \`DEBT.md\`."
           } >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: pytest-python-${{ matrix.python-version }}
