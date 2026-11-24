@@ -16,7 +16,7 @@ dev = [
     "pytest>=8",
     "ruff>=0.6",
     "mypy>=1.11",
-    "pyrefly>=0.30",
+    "pyrefly>=1.5.0",
 ]
 
 [project.scripts]
